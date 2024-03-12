@@ -25,11 +25,11 @@ cursor = base.cursor()
 
 #-----------------------------------------------------------------------
 
-cursor.execute('CREATE TABLE IF NOT EXISTS INGREDIENTES( )')
+cursor.execute('CREATE TABLE IF NOT EXISTS INGREDIENTES(Nombre, Cantidad, Precio, Detalle )')
 
-cursor.execute('CREATE TABLE IF NOT EXISTS RECETAS( )')
+cursor.execute('CREATE TABLE IF NOT EXISTS RECETAS(Nombre)')
 
-cursor.execute('CREATE TABLE IF NOT EXISTS PLATOS( )')
+cursor.execute('CREATE TABLE IF NOT EXISTS PLATOS(Nombre, Ganancia, Precio_Final )')
 
 #-----------------------------------------------------------------------
 
@@ -54,6 +54,14 @@ menu_ver = '''
 ---- VER ----
 1= Ingredientes
 2= Recetas
+3= Platos
+4= Volver
+'''
+
+menu_mod = '''
+---- MODIFICAR ----
+1= Ingredientes
+2= Recetas 
 3= Platos
 4= Volver
 '''
@@ -102,6 +110,10 @@ while True: #Bucle Principal
 
                 nombre = input('Nombre de la receta: ')
                 ingredientes = input('Ingredientes (separados por coma): ') # Vamos a usar un split para cargar a la base de datos.
+
+                cargar_ingredientes = ingredientes.split(", ")
+
+                cursor.executemany("INSERT INTO RECETAS VALUES (?)",cargar_ingredientes) #Para cargar todo, por ahora puse solamente la lista de ingredientes.
                            
             if opcion_n == 3: #Ingreso Datos Platos
                 
@@ -112,6 +124,3 @@ while True: #Bucle Principal
 
             if opcion_n == 4: #Volver 
                 break
-
-
-        
