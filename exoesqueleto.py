@@ -31,19 +31,34 @@ def cambiar_otro(Cambot): #Preguntar si quiere modificar otro dato
 
 base = connect('sistema.db')
 cursor = base.cursor()
+def obtener_ingredientes():
+    conexion = cursor.connect('ingredientes.db')
+    cursor = conexion.cursor()
+    cursor.execute("SELECT * FROM Ingredientes")
+    ingredientes = cursor.fetchall()
+    conexion.close()
+    return ingredientes
+# Función para actualizar la tabla
+def actualizar_tabla(tabla):
+    for row in tabla.get_children():
+        tabla.delete(row)
+    ingredientes = obtener_ingredientes()
+    for ingrediente in ingredientes:
+        tabla.insert('', 'end', values=ingrediente)
 
 cursor.execute(' CREATE TABLE IF NOT EXISTS INGREDIENTES  ( Codigo_Ingrediente INT PRIMARY KEY AUTO_INCREMENT, Nombre VARCHAR(100), Unidad_Medida VARCHAR(50), Cantidad NUMBER, Precio NUMBER, Detalles TEXT )')
 cursor.execute('CREATE TABLE IF NOT EXISTS RECETAS (Codigo_Receta INT PRIMARY KEY AUTO_INCREMENT, Nombre VARCHAR(100) PRIMARY KEY, Costo NUMBER, Codigo_Ingrediente INT, Cantidad_De_Cada_Ingrediente NUMBER, FOREIGN KEY (Codigo_Ingrediente) REFERENCES INGREDIENTES(Codigo_Ingrediente));')
 cursor.execute('CREATE TABLE IF NOT EXISTS PLATOS ( Nombre VARCHAR(100) PRIMARY KEY, Ganancia NUMBER, Precio_Final NUMBER)')
 
 while True:
-	print("---- MENU ----")
+	print("\n \n ---- MENU ----")
 	print("1= Ingredientes")
 	print("2= Recetas")
 	print("3= Platos")
 	print("4= Carta")
 	print("0= Salir")
 	o = input("Ingrese una opción: ")
+	print("\n \n")
 	if o == "1":
 		while True:
 			print("---- Ingredientes ----")
@@ -70,12 +85,10 @@ while True:
 						break
 					if op == "n":
 						print("va devuelta","\n")
-					
 
 			elif oi == "2":
 				ventana = tk.Tk()
 				ventana.title("Lista de Ingredientes")
-			
 				# Crear tabla
 				tabla = ttk.Treeview(ventana, columns=("Nombre", "Cantidad", "Unidad de Medida", "Precio"))
 				tabla.heading("#0", text="Código")
@@ -84,24 +97,24 @@ while True:
 				tabla.heading("Unidad de Medida", text="Unidad de Medida")
 				tabla.heading("Precio", text="Precio")
 				tabla.pack()
-			
-			# # Botón para actualizar la tabla
-			# btn_actualizar = ttk.Button(ventana, text="Actualizar", command=actualizar_tabla)
-			# btn_actualizar.pack()
-			# 
-			# # Mostrar la tabla inicialmente
-			# actualizar_tabla()
-			# 
+				# Botón para actualizar la tabla
+				btn_actualizar = ttk.Button(ventana, text="Actualizar", command=actualizar_tabla)
+				btn_actualizar.pack()
+				# Mostrar la tabla inicialmente
+				actualizar_tabla()
 				ventana.mainloop()
-				print("asda.")
 				# ver ingredientes
 
 			elif oi == "3":
-				# modificar ingredientes modificar todos los ingredientes y/o 
+				#modificar ingredientes modificar todos los ingredientes y/o 
+				print("")
+
+			elif oi == "4":
+				#eliminar ingrediente y/o 
 				print("")
 
 
-			elif oi == "4":
+			elif oi == "5":
 				break
 			else:
 				print("Opción no válida, seleccione una opción válida.")
@@ -113,6 +126,7 @@ while True:
 			print("2= Ver")
 			print("3= Modificar")
 			print("4= Volver")
+			print("5= Eliminar")
 
 			orr = input("Ingrese una opción: ")
 
@@ -188,15 +202,32 @@ while True:
 							cursor.execute('SELECT Codigo_Ingrediente FROM RECETAS WHERE Codigo_Receta = ?',(B_Cod_Receta))
 							registro = cursor.fetchall()
 
-							ingrediente = registro.split(', ')
+							ingrediente = registro.split(', ') #Una lista no puede separarse por SPLIT , CAMBIAR
 
 							print(f'Los codigo de ingrediente son: {ingrediente}')
 
-							mod_ingrediente = int(input('Ingrese el ingrediente viejo: '))
+							RB_ingrediente = int(input('Ingrese el ingrediente viejo: '))
 
-							
+							for i in ingrediente:
+								if i == RB_ingrediente:
+									mod_ingrediente = input('Ingrese el nuevo ingrediente: ')
+									
+									ingrediente.remove(RB_ingrediente)
 
-							
+									ingrediente.insert(i, mod_ingrediente)
+
+								else:
+									print('\n')
+
+									pregunta = input('Quiere modificar otro ingrediente? (s/n): ')
+									if pregunta.lower() == 's':
+										pass 
+									else:
+										break
+
+							#Buscar el ingrediente que quiero modificar en la lista
+							#Si esta. Modificarlo con otro input
+							#Si no, preguntar para modificar otro o salir	
 
 			elif orr == "4":
 				break
