@@ -90,10 +90,10 @@ while True: #Bucle Principal
 		print("Valor incorrecto. Reintente...")
 
 	
-	if opcion == 1: #Menu de agregar datos
+	if opcion == 1: #Menu de Ingredientes
 		while True:
 			
-			print(menu_agregar) #Imprimo el menu de agregar
+			print(menu_ingredientes) #Imprimo el menu de agregar
 
 			opcion_n = int(input('Ingrese la opcion deseada: '))
 			validar_opcion(opcion_n)
@@ -105,37 +105,8 @@ while True: #Bucle Principal
 				nombre = input('Nombre del ingrediente: ')
 				cantidad = int(input('Cantidad del ingrediente: '))
 				precio = int(input('Precio del ingrediente: ')) 
-			
-			if opcion_n == 2: #Ingreso datos recetas
-				
-				print("\n","Esta ingresando recetas", "\n")
 
-				nombre = input('Nombre de la receta: ')
-				ingredientes = input('Ingredientes (separados por coma): ') # Vamos a usar un split para cargar a la base de datos.
-
-				cargar_ingredientes = ingredientes.split(", ")
-
-				cursor.executemany("INSERT INTO RECETAS VALUES (?)",cargar_ingredientes) #Para cargar todo, por ahora puse solamente la lista de ingredientes.
-						   
-			if opcion_n == 3: #Ingreso Datos Platos
-				
-				print("\n","Esta ingresando platos", "\n")
-
-				nombre = input('Nombre del plato: ')
-				precio = int(input('Precio del plato: ')) 
-
-			if opcion_n == 4: #Volver 
-				break
-	
-	if opcion == 2:
-		while True:
-			
-			print(menu_ver) #Imprimo el menu ver
-
-			opcion_n = int(input('Ingrese la opcion deseada: '))
-			validar_opcion(opcion_n)
-		
-			if opcion_n == 1: #Ver Ingredientes
+			if opcion_n == 2: #Ver Ingredientes
 				
 				print('Leyendo Ingredientes')
 
@@ -154,13 +125,43 @@ Cantidad: {registro[2]}
 Precio: {registro[3]}
 
 """)
+
+			if opcion_n == 3: #Modificar
 				pass
 
-			if opcion_n == 2: #Ver Recetas
-				pass
 
-			if opcion_n == 3: #Ver Platos
-				pass
-
-			if opcion_n == 4: #Volver
+			if opcion_n == 4: #Volver 
 				break
+	
+	if opcion == 2: # Menu de Recetas
+		while True:
+
+			if opcion_n == 1: #Ingreso datos recetas
+				
+				print("\n","Esta ingresando recetas", "\n")
+
+				nombre = input('Nombre de la receta: ')
+				ingredientes = input('Ingredientes (separados por coma): ') # Vamos a usar un split para cargar a la base de datos.
+
+				cargar_ingredientes = ingredientes.split(", ")
+
+				cursor.executemany("INSERT INTO RECETAS VALUES (?)",cargar_ingredientes) #Para cargar todo, por ahora puse solamente la lista de ingredientes.
+						   
+			if opcion_n == 2: #Ver Recetas
+
+				print('Leyendo Recetas')
+
+				cursor.execute('SELECT * FROM RECETAS') #consigo los datos de recetas
+				
+				registros = cursor.fetchall()
+				total_registros = len(registros)
+				indice = 0
+
+				while True:
+					registro = registros[indice]
+					print(f"""
+Ingrediente: {registro[0]}
+Un. Medida: {registro[1]}
+Cantidad: {registro[2]}
+Precio: {registro[3]}
+""") #CAMBIAR
