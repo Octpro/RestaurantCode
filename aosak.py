@@ -1,16 +1,18 @@
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 import sqlite3
-from pyperclip import *
+#from pyperclip import *
 
-base = sqlite3.connect('sistema.db')
+base = sqlite3.connect('sistemaa.db')
 cursor = base.cursor()
 
 cursor.execute('CREATE TABLE IF NOT EXISTS INGREDIENTES  ( Codigo_Ingrediente INTEGER PRIMARY KEY AUTOINCREMENT, Nombre VARCHAR(100), Unidad_Medida VARCHAR(50), Cantidad NUMBER, Precio NUMBER, Detalles TEXT )')
 cursor.execute('CREATE TABLE IF NOT EXISTS RECETAS (Codigo_Receta INTEGER PRIMARY KEY AUTOINCREMENT, Nombre VARCHAR(100), Costo NUMBER, Codigo_Ingrediente INT, Cantidad_De_Cada_Ingrediente NUMBER, FOREIGN KEY (Codigo_Ingrediente) REFERENCES INGREDIENTES(Codigo_Ingrediente))')
-cursor.execute('CREATE TABLE IF NOT EXISTS PLATOS ( Nombre VARCHAR(100) PRIMARY KEY, Ganancia NUMBER, Precio_Final NUMBER, Implementado_Menu BOOLEAN , Apto_Veganos BOOLEAN, Apto_Vegetarianos BOOLEAN, Apto_Celiacos BOOLEAN)')
+cursor.execute('CREATE TABLE IF NOT EXISTS PLATOS (ID INTEGER PRIMARY KEY AUTOINCREMENT,Nombre VARCHAR(100),Ganancia NUMERIC,Precio_Final NUMERIC,Implementado_Menu BOOLEAN, Especificaciones VARCHAR(100));')
 cursor.execute("CREATE TABLE IF NOT EXISTS Menu (Nombre_Plato VARCHAR(100), FOREIGN KEY (Nombre_Plato) REFERENCES Platos(Nombre) ON DELETE CASCADE)")
+cursor.execute("CREATE TABLE IF NOT EXISTS RECETAS_INGREDIENTES (Codigo_Receta INTEGER,Codigo_Ingrediente INTEGER,Cantidad NUMBER,FOREIGN KEY (Codigo_Receta) REFERENCES RECETAS(Codigo_Receta),FOREIGN KEY (Codigo_Ingrediente) REFERENCES INGREDIENTES(Codigo_Ingrediente))")
 
 def ingresar_ingrediente(frame):
 	opciones_unidades = ["Gramos (g)", "Kilogramos (kg)", "Miligramos (mg)", "Libras (lb)", "Onzas (oz)",
@@ -41,19 +43,25 @@ def ingresar_ingrediente(frame):
 		base.commit()
 		frame.forget()
 	tk.Button(frame, text="Guardar", command=guardar_ingrediente).pack()
-
 def ver_ingrediente(frame):
 	cursor.execute("SELECT Codigo_Ingrediente, Nombre, Cantidad, Unidad_Medida, Precio FROM Ingredientes")
 	ingredientes = cursor.fetchall()
 	if not ingredientes:
 		print("No hay ingredientes para mostrar.")
 		return
+	
 	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Cantidad", "Unidad de Medida", "Precio por Unidad"), show="headings")
 	tabla.heading("Código", text="Código")
 	tabla.heading("Nombre", text="Nombre")
 	tabla.heading("Cantidad", text="Cantidad")
 	tabla.heading("Unidad de Medida", text="Unidad de Medida")
 	tabla.heading("Precio por Unidad", text="Precio por Unidad")
+	
+	# Agregar Scrollbar
+	scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tabla.yview)
+	tabla.configure(yscrollcommand=scrollbar.set)
+	scrollbar.pack(side="right", fill="y")
+	
 	for ingrediente in ingredientes:
 		codigo, nombre, cantidad, unidad, precio = ingrediente
 		precio_por_unidad = precio / cantidad
@@ -170,9 +178,13 @@ def ingresar_receta(frame):
 		costo_total = 0
 		for nombre, cantidad in ingredientes_receta:
 			cursor.execute("SELECT Precio FROM Ingredientes WHERE Nombre = ?", (nombre,))
-			precio_ingrediente = cursor.fetchone()[0]
-			costo_ingrediente = precio_ingrediente * cantidad
-			costo_total += costo_ingrediente
+			precio_ingrediente = cursor.fetchone()
+			if precio_ingrediente:
+				precio_ingrediente = precio_ingrediente[0]
+				costo_ingrediente = precio_ingrediente * cantidad
+				costo_total += costo_ingrediente
+			else:
+				messagebox.showerror("Error", f"No se encontró el precio para el ingrediente {nombre}.")
 		return costo_total
 	def agregar_ingrediente():
 		codigo_ingrediente = int(entry_codigo.get())
@@ -222,19 +234,27 @@ def ingresar_receta(frame):
 
 def obtener_recetas_con_costo():
 	try:
-		consulta = "SELECT * FROM RECETAS"
+		consulta = """
+		SELECT Codigo_Receta, Nombre, 
+			   (SELECT SUM(I.Precio * R.Cantidad_De_Cada_Ingrediente) 
+				FROM INGREDIENTES I 
+				WHERE I.Codigo_Ingrediente = R.Codigo_Ingrediente) AS Costo_Total
+		FROM RECETAS R
+		"""
 		cursor.execute(consulta)
 		recetas = cursor.fetchall()
 		return recetas
 	except Exception as e:
 		raise e
+
+# Modificar las funciones para trabajar con la nueva estructura de la base de datos
 def obtener_ingredientes_por_receta(id_receta):
 	try:
 		consulta = """
-		SELECT I.Nombre, R.Cantidad_De_Cada_Ingrediente, I.Precio
+		SELECT I.Nombre, RI.Cantidad, I.Precio
 		FROM INGREDIENTES I
-		JOIN RECETAS R ON I.Codigo_Ingrediente = R.Codigo_Ingrediente
-		WHERE R.Codigo_Receta = ?
+		JOIN RECETAS_INGREDIENTES RI ON I.Codigo_Ingrediente = RI.Codigo_Ingrediente
+		WHERE RI.Codigo_Receta = ?
 		"""
 		cursor.execute(consulta, (id_receta,))
 		ingredientes = cursor.fetchall()
@@ -295,9 +315,9 @@ def mostrar_recetas_con_costo(frame):
 			canvas.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
 
 		else:
-			print("No hay recetas disponibles.")
+			messagebox.showerror("Error", "No hay recetas disponibles.")
 	except Exception as e:
-		print("Error al mostrar recetas con costo:", e)
+		messagebox.showerror("Error", f"Error al mostrar recetas con costo: {e}")
 
 def anglosajona():
 	def obtener_recetas_con_costo():
@@ -335,26 +355,27 @@ def anglosajona():
 			recetas = obtener_recetas_con_costo()
 			if recetas:
 				toplevel = tk.Toplevel(root)
-				tabla = ttk.Treeview(toplevel, columns=("Código Receta", "Nombre Receta", "Costo Receta" ,"Ingredientes"))
+				tabla = ttk.Treeview(toplevel, columns=("Código Receta", "Nombre Receta", "Costo Receta", "Ingredientes"))
 				tabla.heading("#0", text="Índice")
 				tabla.heading("Código Receta", text="Código Receta")
 				tabla.heading("Nombre Receta", text="Nombre Receta")
 				tabla.heading("Costo Receta", text="Costo Receta")
-				tabla.heading("Ingredientes", text="Ingredientes")            
+				tabla.heading("Ingredientes", text="Ingredientes")
 				tabla.pack(fill="both", expand=True)
 				for index, receta in enumerate(recetas, start=1):
-					id_receta = receta[0] # Suponiendo que el ID de la receta es el primer elemento
+					id_receta = receta[0]
 					ingredientes = obtener_ingredientes_por_receta(id_receta)
 					costo_ingredientes = calcular_costo_ingredientes(ingredientes)
-					tabla.insert('', 'end', text=str(index), values=(receta[0], receta[1], costo_ingredientes, ', '.join([f"{ing[0]} ({ing[1]} unidades)" for ing in ingredientes])))
+					ingredientes_str = ', '.join([f"{ing[0]} ({ing[1]} unidades)" for ing in ingredientes])
+					tabla.insert('', 'end', text=str(index), values=(receta[0], receta[1], costo_ingredientes, ingredientes_str))
 			else:
-				print("No hay recetas disponibles.")
+				messagebox.showinfo("Información", "No hay recetas disponibles.")
 		except Exception as e:
-			print("Error al mostrar recetas con costo:", e)
-	# Ejemplo de uso
+			messagebox.showerror("Error", f"Error al mostrar recetas con costo: {e}")
 	root = tk.Tk()
 	mostrar_recetas_con_costo_en_toplevel(root)
 	root.mainloop()
+
 
 def modificar_receta(frame):
 	tk.Label(frame, text="Código de la receta a modificar:").pack()
@@ -429,177 +450,160 @@ def eliminar_receta(frame):
 #..................
 
 def ingresar_plato(frame):
-	# Función para calcular el precio de la receta asociada
-	def calcular_receta(nombre_receta):
-		cursor.execute("SELECT Codigo_Ingrediente, Cantidad_De_Cada_Ingrediente FROM Recetas WHERE Nombre = ?", (nombre_receta,))
-		ingredientes_receta = cursor.fetchall()
-		costo_total = 0
-		for codigo_ingrediente, cantidad_ingrediente in ingredientes_receta:
-			cursor.execute("SELECT Precio FROM Ingredientes WHERE Codigo_Ingrediente = ?", (codigo_ingrediente,))
-			precio_ingrediente = cursor.fetchone()[0]
-			costo_total += precio_ingrediente * cantidad_ingrediente
-		return costo_total
+	implementado_menu = tk.BooleanVar()
 
-	# Función para confirmar el nombre de la receta y calcular el precio del plato
-	def confirmar_nombre_receta(entry_nombre_receta, entry_precio_manual):
-		nombre_receta = entry_nombre_receta.get()
-		precio_manual = entry_precio_manual.get()
-		if precio_manual:
-			precio_final = float(precio_manual)
-		else:
-			precio_final = calcular_receta(nombre_receta)
-		return precio_final
-
-	# Función para guardar el plato
-	def guardar_plato(entry_nombre, entry_ganancia, implementado_var, veganos_var, vegetarianos_var, celiacos_var, entry_nombre_receta, entry_precio_manual):
+	def implementar_en_menu():
+		nombre_plato = nombre_entry.get()
+		print(nombre_plato)
+		cursor.execute("SELECT Implementado_Menu FROM Platos WHERE Nombre=?", (nombre_plato,))
+		plato = cursor.fetchone()
+		if plato:
+			if plato[0] == 1:
+				messagebox.showinfo("Error", "El plato ya está implementado en el menú.")
+			else:
+				cursor.execute("UPDATE Platos SET Implementado_Menu=1 WHERE Nombre=?", (nombre_plato,))
+				base.commit()
+				messagebox.showinfo("Éxito", "El plato se ha implementado en el menú correctamente.")
+				
+	def guardar_plato(entry_nombre, entry_ganancia, implementar_menu_check, entry_precio, detalles):
 		nombre = entry_nombre.get()
 		ganancia_porcentaje = float(entry_ganancia.get())
-		implementado_menu = implementado_var.get()
-		apto_veganos = veganos_var.get()
-		apto_vegetarianos = vegetarianos_var.get()
-		apto_celiacos = celiacos_var.get()
+		precio_final = entry_precio.get()
+		detalles_plato = detalles.get()
+		if nombre and ganancia_porcentaje and precio_final:
+			implementado_menu_value = implementado_menu.get()
+			if implementado_menu_value == 1:
+				implementado_menu_value = "Si"
+			else:
+				implementado_menu_value = "No"
 
-		precio_final = confirmar_nombre_receta(entry_nombre_receta, entry_precio_manual)
-
-		cursor.execute("INSERT INTO Platos (Nombre, Ganancia, Precio_Final, Implementado_Menu, Apto_Veganos, Apto_Vegetarianos, Apto_Celiacos) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					(nombre, ganancia_porcentaje, precio_final, implementado_menu, apto_veganos, apto_vegetarianos, apto_celiacos))
-		base.commit()
-		messagebox.showinfo("Éxito", "Plato ingresado correctamente.")
-
-	# Función para implementar el plato en el menú
-	def implementar_en_menu():
-		nombre_plato = entry_nombre.get()
-		cursor.execute("SELECT Nombre FROM Carta WHERE Nombre = ?", (nombre_plato,))
-		plato_existente = cursor.fetchone()
-		if plato_existente:
-			messagebox.showwarning("Advertencia", f"El plato '{nombre_plato}' ya está en la carta.")
-		else:
-			cursor.execute("INSERT INTO Carta (Nombre) VALUES (?)", (nombre_plato,))
+			cursor.execute("INSERT INTO PLATOS (Nombre, Ganancia, Precio_Final, Implementado_Menu, Especificaciones) VALUES (?, ?, ?, ?, ?)",(nombre, ganancia_porcentaje, precio_final, implementado_menu_value, detalles_plato))
 			base.commit()
-			messagebox.showinfo("Éxito", f"El plato '{nombre_plato}' ha sido implementado en el menú.")
-	# Crear la ventana principal
-	# Widgets para ingresar los datos del plato
-	tk.Label(frame, text="Nombre del plato:").pack()
-	entry_nombre = tk.Entry(frame)
-	entry_nombre.pack()
-	tk.Label(frame, text="% Ganancia del plato:").pack()
-	entry_ganancia = tk.Entry(frame)
-	entry_ganancia.pack()
-	implementado_var = tk.BooleanVar()
-	tk.Checkbutton(frame, text="¿Está implementado en el menú?", variable=implementado_var).pack()
-	veganos_var = tk.BooleanVar()
-	tk.Checkbutton(frame, text="¿Es apto para veganos?", variable=veganos_var).pack()
-	vegetarianos_var = tk.BooleanVar()
-	tk.Checkbutton(frame, text="¿Es apto para vegetarianos?", variable=vegetarianos_var).pack()
-	celiacos_var = tk.BooleanVar()
-	tk.Checkbutton(frame, text="¿Es apto para celiacos?", variable=celiacos_var).pack()
-	tk.Label(frame, text="Nombre de la receta asociada:").pack()
-	entry_nombre_receta = tk.Entry(frame)
-	entry_nombre_receta.pack()
-	tk.Label(frame, text="Precio manual (opcional):").pack()
-	entry_precio_manual = tk.Entry(frame)
-	entry_precio_manual.pack()
-	# Botón para guardar el plato
-	tk.Button(frame, text="Guardar", command=lambda: guardar_plato(entry_nombre, entry_ganancia, implementado_var, veganos_var, vegetarianos_var, celiacos_var, entry_nombre_receta, entry_precio_manual)).pack()
-	# Botón para implementar el plato en el menú
-	tk.Button(frame, text="IMPLEMENTAR EN EL MENÚ", command=implementar_en_menu).pack()
+			messagebox.showinfo("Éxito", "Plato ingresado correctamente.")
+		else:
+			messagebox.showinfo("Error", "Por favor completa todos los campos obligatorios.")
 
+	nombre_label = tk.Label(frame, text="Nombre del Plato:")
+	nombre_label.grid(row=0, column=0, padx=10, pady=10)
+	nombre_entry = tk.Entry(frame)
+	nombre_entry.grid(row=0, column=1, padx=10, pady=10)
+	ganancia_label = tk.Label(frame, text="Ganancia:")
+	ganancia_label.grid(row=1, column=0, padx=10, pady=10)
+	ganancia_entry = tk.Entry(frame)
+	ganancia_entry.grid(row=1, column=1, padx=10, pady=10)
+	precio_label = tk.Label(frame, text="Precio del Plato:")
+	precio_label.grid(row=2, column=0, padx=10, pady=10)
+	precio_entry = tk.Entry(frame)
+	precio_entry.grid(row=2, column=1, padx=10, pady=10)
+	detalles_lab = tk.Label(frame, text="Detalles del plato")
+	detalles_lab.grid(row=3, column=0, padx=10, pady=10)
+	detalles = tk.Entry(frame)
+	detalles.grid(row=3, column=1, padx=10, pady=10)
+	implementar_menu_lab = tk.Label(frame, text= "Implementar al menu").grid(row=4, column=0, padx=10, pady=10)
+	implementar_menu_check = tk.Checkbutton(frame, text="Implementar menu", offvalue="No", onvalue="Si", variable=implementado_menu)
+	implementar_menu_check.grid(row=4, column=1, padx=10, pady=10)
+	guardar_button = tk.Button(frame, text="Guardar", command=lambda: guardar_plato(nombre_entry, ganancia_entry, implementar_menu_check, precio_entry, detalles))
+	guardar_button.grid(row=5, column=0, padx=10, pady=10)
+	implementar_menu_button = tk.Button(frame, text="Verificar si esta en el Menú", command=implementar_en_menu)
+	implementar_menu_button.grid(row=5, column=1, padx=10, pady=10)
+	
 def mostrar_platos_menu(frame):
 	cursor.execute("SELECT * FROM Platos")
 	platos = cursor.fetchall()
-
-	tabla = ttk.Treeview(frame, columns=("Nombre", "Ganancia", "Precio Final", "Implementado en Menú", "Apto Veganos", "Apto Vegetarianos", "Apto Celiacos"))
+	tabla = ttk.Treeview(frame, columns=("Nombre", "Ganancia", "Precio Final", "Implementado en Menú", "Especificaciones"))
 	tabla.heading("#0", text="Índice")
 	tabla.heading("Nombre", text="Nombre")
 	tabla.heading("Ganancia", text="Ganancia")
 	tabla.heading("Precio Final", text="Precio Final")
 	tabla.heading("Implementado en Menú", text="Implementado en Menú")
-	tabla.heading("Apto Veganos", text="Apto Veganos")
-	tabla.heading("Apto Vegetarianos", text="Apto Vegetarianos")
-	tabla.heading("Apto Celiacos", text="Apto Celiacos")
+	tabla.heading("Especificaciones", text="Especificaciones")
+	for index, plato in enumerate(platos, start=1):
+		tabla.insert('', 'end', text=str(index), values=(plato[1], plato[2], plato[3],plato[4] ,plato[5]))
+	tabla.pack(fill="both", expand=True)
+	
 
+def mostrar_platos_menus():
+	rootT = tk.Tk()
+	rootT.title("Aplicación CRUD")
+	rootT.geometry("900x800")
+	cursor.execute("SELECT * FROM Platos")
+	platos = cursor.fetchall()
+	tabla = ttk.Treeview(rootT, columns=("Nombre", "Ganancia", "Precio Final", "Implementado en Menú", "Especificaciones"))
+	tabla.heading("#0", text="Índice")
+	tabla.heading("Nombre", text="Nombre")
+	tabla.heading("Ganancia", text="Ganancia")
+	tabla.heading("Precio Final", text="Precio Final")
+	tabla.heading("Implementado en Menú", text="Implementado en Menú")
+	tabla.heading("Especificaciones", text="Especificaciones")
 	for index, plato in enumerate(platos, start=1):
 		implementado = "Sí" if plato[3] else "No"
-		tabla.insert('', 'end', text=str(index), values=(plato[0], plato[1], plato[2], implementado, plato[4], plato[5], plato[6]))
-
+		tabla.insert('', 'end', text=str(index), values=(plato[1], plato[2], plato[3], implementado))
 	tabla.pack(fill="both", expand=True)
-def mostrar_platos_menu_en_toplevel(root):
-	try:
+
+def modificar_plato(frame):
+
+	def guardar_platos_menu(frame):
 		cursor.execute("SELECT * FROM Platos")
 		platos = cursor.fetchall()
 
-		toplevel = tk.Toplevel(root)
-		tabla = ttk.Treeview(toplevel, columns=("Nombre", "Ganancia", "Precio Final", "Implementado en Menú", "Apto Veganos", "Apto Vegetarianos", "Apto Celiacos"))
+		tabla = ttk.Treeview(frame, columns=("Nombre", "Ganancia", "Precio Final", "Implementado en Menú", "Especificaciones"))
 		tabla.heading("#0", text="Índice")
 		tabla.heading("Nombre", text="Nombre")
 		tabla.heading("Ganancia", text="Ganancia")
 		tabla.heading("Precio Final", text="Precio Final")
 		tabla.heading("Implementado en Menú", text="Implementado en Menú")
-		tabla.heading("Apto Veganos", text="Apto Veganos")
-		tabla.heading("Apto Vegetarianos", text="Apto Vegetarianos")
-		tabla.heading("Apto Celiacos", text="Apto Celiacos")
 		for index, plato in enumerate(platos, start=1):
 			implementado = "Sí" if plato[3] else "No"
-			tabla.insert('', 'end', text=str(index), values=(plato[0], plato[1], plato[2], implementado, plato[4], plato[5], plato[6]))
-		tabla.pack(fill="both", expand=True)
-	except Exception as e:
-		print("Error al mostrar platos en el menú:", e)
+			tabla.insert('', 'end', text=str(index), values=(plato[0], plato[1], plato[2], implementado))
 
-def modificar_plato(frame):
-	tk.Label(frame, text="ID del plato a modificar:").pack()
-	entry_id_modificar = tk.Entry(frame)
-	entry_id_modificar.pack()
-	
-	def obtener_y_modificar_datos(frame):
-		id_plato = entry_id_modificar.get()
-		cursor.execute("SELECT * FROM Platos WHERE ID =?", (id_plato,))
-		plato = cursor.fetchone()
-		if plato:
-			frame = tk.Toplevel()
-			frame.title("Detalle del Plato")
-			tk.Label(frame, text=f"Nombre: {plato[0]}").pack()
-			tk.Label(frame, text=f"Ganancia: {plato[1]}").pack()
-			tk.Label(frame, text=f"Precio Final: {plato[2]}").pack()
-			tk.Label(frame, text=f"Implementado en Menú: {'Sí' if plato[3] else 'No'}").pack()
-			tk.Label(frame, text=f"Apto Veganos: {'Sí' if plato[4] else 'No'}").pack()
-			tk.Label(frame, text=f"Apto Vegetarianos: {'Sí' if plato[5] else 'No'}").pack()
-			tk.Label(frame, text=f"Apto Celiacos: {'Sí' if plato[6] else 'No'}").pack()
-			def confirmar_plato(frame):
-				tk.Label(frame, text="Nuevo valor para Ganancia:").pack()
-				entry_ganancia = tk.Entry(frame)
-				entry_ganancia.pack()
-				tk.Label(frame, text="Nuevo valor para Precio Final:").pack()
-				entry_precio = tk.Entry(frame)
-				entry_precio.pack()
-				tk.Label(frame, text="¿Modificar implementación en menú? (S/N):").pack()
-				entry_implementado = tk.Entry(frame)
-				entry_implementado.pack()
-				tk.Label(frame, text="¿Modificar apto para veganos? (S/N):").pack()
-				entry_veganos = tk.Entry(frame)
-				entry_veganos.pack()
-				tk.Label(frame, text="¿Modificar apto para vegetarianos? (S/N):").pack()
-				entry_vegetarianos = tk.Entry(frame)
-				entry_vegetarianos.pack()
-				tk.Label(frame, text="¿Modificar apto para celiacos? (S/N):").pack()
-				entry_celiacos = tk.Entry(frame)
-				entry_celiacos.pack()
-				def guardar_modificacion():
-					nueva_ganancia = float(entry_ganancia.get())
-					nuevo_precio = float(entry_precio.get())
-					nueva_implementacion = entry_implementado.get().upper() == "S"
-					nuevo_veganos = entry_veganos.get().upper() == "S"
-					nuevo_vegetarianos = entry_vegetarianos.get().upper() == "S"
-					nuevo_celiacos = entry_celiacos.get().upper() == "S"
-					cursor.execute("UPDATE Platos SET Ganancia = ?, Precio_Final = ?, Implementado_Menu = ?, Apto_Veganos = ?, Apto_Vegetarianos = ?, Apto_Celiacos = ? WHERE ID = ?",
-									(nueva_ganancia, nuevo_precio, nueva_implementacion, nuevo_veganos, nuevo_vegetarianos, nuevo_celiacos, id_plato))
-					base.commit()
-					messagebox.showinfo("Éxito", "Plato modificado correctamente.")
-				tk.Button(frame, text="Guardar Modificación", command=guardar_modificacion).pack()
-			tk.Button(frame, text="Modificar", command=confirmar_plato).pack()
-		else:
-			messagebox.showerror("Error", "El plato especificado no existe.")
-	tk.Button(frame, text="Obtener Detalle", command=obtener_y_modificar_datos).pack()
-	tk.Button(frame, text="        Ver        ",command=mostrar_platos_menu_en_toplevel).pack()
+		tabla.pack(fill="both", expand=True)
+
+		# Validar si se ha agregado al menos un plato al menú antes de guardar
+		if len(platos) == 0:
+			messagebox.showwarning("Advertencia", "No has añadido ningún plato al menú. Por favor, asegúrate de añadir al menos un plato al menú antes de guardar los cambios.")
+
+	def mostrar_detalle_modificar(frame):
+		tk.Label(frame, text="Nombre del plato a modificar:").pack()
+		entry_nombre_modificar = tk.Entry(frame)
+		entry_nombre_modificar.pack()
+		def obtener_datos_modificar():
+			nombre_plato = entry_nombre_modificar.get()
+			cursor.execute("SELECT * FROM Platos WHERE Nombre = ?", (nombre_plato,))
+			plato = cursor.fetchone()
+			if plato:
+				frame.title("Detalle del Plato")
+				tk.Label(frame, text=f"Nombre: {plato[0]}").pack()
+				tk.Label(frame, text=f"Ganancia: {plato[1]}").pack()
+				tk.Label(frame, text=f"Precio Final: {plato[2]}").pack()
+				tk.Label(frame, text=f"Implementado en Menú: {'Sí' if plato[3] else 'No'}").pack()
+
+				def modificar_plato():
+					tk.Label(frame, text="Nuevo valor para Ganancia:").pack()
+					entry_ganancia = tk.Entry(frame)
+					entry_ganancia.pack()
+					tk.Label(frame, text="Nuevo valor para Precio Final:").pack()
+					entry_precio = tk.Entry(frame)
+					entry_precio.pack()
+					tk.Label(frame, text="¿Modificar implementación en menú? (S/N):").pack()
+					entry_implementado = tk.Entry(frame)
+					entry_implementado.pack()
+
+					def guardar_modificacion():
+						nueva_ganancia = float(entry_ganancia.get())
+						nuevo_precio = float(entry_precio.get())
+						nueva_implementacion = entry_implementado.get().upper() == "S"
+
+						cursor.execute("UPDATE Platos SET Ganancia = ?, Precio_Final = ?, Implementado_Menu = ? WHERE Nombre = ?",
+									   (nueva_ganancia, nuevo_precio, nueva_implementacion, nombre_plato))
+						base.commit()
+						tk.messagebox.showinfo("Éxito", "Plato modificado correctamente.")
+					tk.Button(frame, text="Guardar Modificación", command=guardar_modificacion).pack()
+				tk.Button(frame, text="Modificar", command=modificar_plato).pack()
+			else:
+				tk.messagebox.showerror("Error", "El plato especificado no existe.")
+		tk.Button(frame, text="Obtener Detalle", command=obtener_datos_modificar).pack()
+		tk.Button(frame, text="        Ver        ",command=mostrar_platos_menus).pack()
+
 
 
 def eliminar_plato(frame):
@@ -617,30 +621,26 @@ def eliminar_plato(frame):
 			tk.messagebox.showinfo("Éxito", "Plato eliminado correctamente.")
 
 	tk.Button(frame, text="Confirmar", command=confirmar_eliminacion).pack()
-	tk.Button(frame, text="        Ver        ",command=mostrar_platos_menu_en_toplevel).pack()
-
+	tk.Button(frame, text="        Ver        ",command=mostrar_platos_menus).pack()
 #_________________________________ M e n u 
 def ver_carta(frame):
 	def cargar_carta():
 		for row in table.get_children():
 			table.delete(row)
-		cursor.execute("SELECT Nombre, Precio_Final, Apto_Veganos, Apto_Vegetarianos, Apto_Celiacos FROM Platos")
+		cursor.execute("SELECT Nombre, Precio_Final, Especificaciones FROM Platos WHERE Implementado_menu = 'Si'")
 		platos = cursor.fetchall()
 		for plato in platos:
 			nombre = plato[0]
 			precio_final = plato[1]
-			apto_veganos = "Sí" if plato[2] else "No"
-			apto_vegetarianos = "Sí" if plato[3] else "No"
-			apto_celiacos = "Sí" if plato[4] else "No"
-			table.insert('', 'end', text=nombre, values=(precio_final, apto_veganos, apto_vegetarianos, apto_celiacos))
+			Especificaciones = plato[2]
+			table.insert('', 'end', text=nombre, values=(precio_final, Especificaciones))
 
 	table = ttk.Treeview(frame)
-	table['columns'] = ('Precio Final', 'Vegano', 'Vegetariano', 'Celiaco')
+	table['columns'] = ('Precio Final', "Especificaciones")
 	table.heading('#0', text='Plato')
 	table.heading('Precio Final', text='Precio Final')
-	table.heading('Vegano', text='Vegano')
-	table.heading('Vegetariano', text='Vegetariano')
-	table.heading('Celiaco', text='Celiaco')
+	table.heading('Especificaciones', text = 'Especificaciones')
+
 	table.pack(padx=10, pady=10)
 	btn_cargar = tk.Button(frame, text="Cargar Carta", command=cargar_carta) 
 	btn_cargar.pack(pady=10)
@@ -652,8 +652,8 @@ def menu_modificar_precios(frame):
 			nuevo_precio = float(entry_nuevo_precio.get())
 			cursor.execute("UPDATE Platos SET Precio_Final = ? WHERE Nombre = ?", (nuevo_precio, nombre_plato))
 			base.commit()
-			tk.messagebox.showinfo("Éxito", f"Se ha modificado el precio del plato '{nombre_plato}' correctamente.")
-
+			tk.messagebox.showinfo("Exito", f"Se ha modificado el precio del plato '{nombre_plato}' correctamente.")
+			#validar que no este antes en el menu
 		tk.Label(frame, text="Nombre del plato:").pack()
 		entry_nombre_plato = tk.Entry(frame)
 		entry_nombre_plato.pack()
@@ -677,7 +677,7 @@ def menu_modificar_precios(frame):
 		entry_porcentaje = tk.Entry(frame)
 		entry_porcentaje.pack()
 		tk.Button(frame, text="Guardar", command=guardar_modificacion).pack()
-
+	# Eliminar en la carta 
 	tk.Button(frame, text="Modificar Precio de Plato Individual", command=modificar_precio_plato_individual).pack(pady=10)
 	tk.Button(frame, text="Modificar Precio de Todos los Platos", command=modificar_precio_todos).pack(pady=10)
 	tk.Button(frame, text="        Ver        ").pack()
@@ -763,7 +763,6 @@ def main():
 
 	for nombre_menu, opciones in menus:
 		crear_menu(menu, nombre_menu, opciones, root)
-
 	root.mainloop()
 
 if __name__ == "__main__":

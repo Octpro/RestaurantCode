@@ -501,7 +501,6 @@ def mostrar_platos_menu():
 
 def modificar_plato():
     def mostrar_detalle_modificar():
-        ventana_modificar = tk.Toplevel()
         ventana_modificar.title("Modificar Plato")
         tk.Label(ventana_modificar, text="Nombre del plato a modificar:").pack()
         entry_nombre_modificar = tk.Entry(ventana_modificar)
@@ -521,7 +520,6 @@ def modificar_plato():
                 tk.Label(ventana_detalle, text=f"Apto Vegetarianos: {'Sí' if plato[5] else 'No'}").pack()
                 tk.Label(ventana_detalle, text=f"Apto Celiacos: {'Sí' if plato[6] else 'No'}").pack()
                 def modificar_plato():
-                    ventana_modificar = tk.Toplevel()
                     ventana_modificar.title("Modificar Plato")
                     tk.Label(ventana_modificar, text="Nuevo valor para Ganancia:").pack()
                     entry_ganancia = tk.Entry(ventana_modificar)
@@ -787,26 +785,19 @@ root.geometry("600x400")
 # Título del menú
 titulo_label = tk.Label(root, text="M E N U", font=("Helvetica", 20), fg="light blue", bg="black")
 titulo_label.pack(pady=10)
-
 # Estilo para los botones
 estilo_botones = {"bg": "light blue", "fg": "black", "font": ("Helvetica", 14)}
-
 # Botones de selección de opción
 ingredientes_btn = tk.Button(root, text="Ingredientes", command=lambda: seleccionar_opcion("Ingredientes"), **estilo_botones)
 ingredientes_btn.pack(pady=10)
-
 recetas_btn = tk.Button(root, text="Recetas", command=lambda: seleccionar_opcion("Recetas"), **estilo_botones)
 recetas_btn.pack(pady=10)
-
 platos_btn = tk.Button(root, text="Platos", command=lambda: seleccionar_opcion("Platos"), **estilo_botones)
 platos_btn.pack(pady=10)
-
 carta_btn = tk.Button(root, text="Carta", command=lambda: seleccionar_opcion("Carta"), **estilo_botones)
 carta_btn.pack(pady=10)
-
 # Botón para salir del programa
 salir_btn = tk.Button(root, text="Salir", command=lambda: seleccionar_opcion("Salir"), **estilo_botones)
 salir_btn.pack(pady=10)
-
 # Ejecutar el bucle principal de la interfaz gráfica
 root.mainloop()
