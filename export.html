@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>py2flowchart</title>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.18.0/flowchart.min.js"></script>
+    </head>
+    <body>
+        <div id="canvas"></div>
+        <pre id="code" style="display:none"></pre>
+        <script>
+            code= `
+start=>start: start
+operation1=>operation: from py2flowchart import pyfile2flowchart
+subroutine2=>subroutine: pyfile2flowchart('C:/Users/octpr/Downloads/20-30EJ.py', 'export.html')
+input3=>input: antiguedad = float(input("Ingrese la antigüedad del trabajador en años: "))
+input4=>input: sueldo = float(input("Ingrese el sueldo del trabajador: "))
+condition5=>condition: if antiguedad > 2 and antiguedad < 5
+operation6=>operation: bono_antiguedad = sueldo * 0.20
+operation7=>operation: bono_antiguedad = sueldo * 0.30
+condition8=>condition: if sueldo < 1000
+operation9=>operation: bono_sueldo = sueldo * 0.25
+condition10=>condition: if sueldo > 1000 and sueldo <= 3500
+operation11=>operation: bono_sueldo = sueldo * 0.15
+operation12=>operation: bono_sueldo = sueldo * 0.10
+condition13=>condition: if bono_antiguedad > bono_sueldo
+operation14=>operation: bono_total = bono_antiguedad
+operation15=>operation: bono_total = bono_sueldo
+output16=>output: print("El bono total asignado al trabajador es:", bono_total)
+end=>end: end
+start->operation1
+operation1->subroutine2
+subroutine2->input3
+input3->input4
+input4->condition5
+condition5(yes)->operation6
+condition5(no)->operation7
+operation6->condition8
+operation7->condition8
+condition8(yes)->operation9
+condition8(no)->condition10
+condition10(yes)->operation11
+condition10(no)->operation12
+operation9->condition13
+operation11->condition13
+operation12->condition13
+condition13(yes)->operation14
+condition13(no)->operation15
+operation14->output16
+operation15->output16
+output16->end
+
+`;
+            chart = flowchart.parse(code);
+            chart.drawSVG('canvas', {"line-width": 2});
+			console.log(code);
+			var code_pre = code.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+            document.getElementById("code").innerHTML = code_pre;
+        </script>
+		<script>
+		// double click to copy svg to clipboard
+		document.ondblclick = async () => {
+			var svg = document.getElementsByTagName('svg')[0];
+			await navigator.clipboard.writeText(svg.outerHTML);
+		}
+		</script>
+		<!-- see https://github.com/dstang2000/py2flowchart -->
+    </body>
+</html>

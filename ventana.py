@@ -2,9 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 import sqlite3
-from pyperclip import *
 
-base = sqlite3.connect('sistema.db')
+base = sqlite3.connect('sistemaa.db')
 cursor = base.cursor()
 
 cursor.execute('CREATE TABLE IF NOT EXISTS INGREDIENTES  ( Codigo_Ingrediente INTEGER PRIMARY KEY AUTOINCREMENT, Nombre VARCHAR(100), Unidad_Medida VARCHAR(50), Cantidad NUMBER, Precio NUMBER, Detalles TEXT )')
