@@ -4,8 +4,7 @@ from tkinter import ttk
 from tkinter import messagebox
 import sqlite3
 from tkinter import *
-from PIL import ImageTk, Image
-#from pyperclip import *
+import re
 
 base = sqlite3.connect('sistemaa.db')
 cursor = base.cursor()
@@ -289,14 +288,15 @@ def obtener_recetas_con_costo():
 		consulta = "SELECT PRECIO FROM INGREDIENTES"
 		cursor.execute(consulta)
 		precio = cursor.fetchone()[0]
-		print(precio)
 
 		consulta = "SELECT CANTIDAD_DE_CADA_INGREDIENTE FROM RECETAS"
 		cursor.execute(consulta)
 		cantidad_de_cada = cursor.fetchone()[0]
-		print(cantidad_de_cada)
 
-		costo_total = int(precio) * int(cantidad_de_cada)
+		numero_parte = re.findall(r'\d+\.\d+', cantidad_de_cada)[0]
+		cantidad_entera = int(float(numero_parte))
+
+		costo_total = int(precio) * cantidad_entera
 		print(f"costo_total = {costo_total}")
 		return recetas, costo_total
 	except Exception as e:
@@ -305,16 +305,16 @@ def obtener_recetas_con_costo():
 def obtener_ingredientes_por_receta(id_receta):
 	try:
 		consulta = """
-		SELECT I.Nombre, I.Cantidad, I.Precio
-		FROM INGREDIENTES I
-		JOIN RECETAS_INGREDIENTES RI ON I.Codigo_Ingrediente = RI.Codigo_Ingrediente
-		WHERE RI.Codigo_Receta = ?
+			SELECT I.Nombre, RI.Cantidad, I.Precio
+			FROM INGREDIENTES I
+			JOIN RECETAS_INGREDIENTES RI ON I.Codigo_Ingrediente = RI.Codigo_Ingrediente
+			WHERE RI.Codigo_Receta = ?
 		"""
 		cursor.execute(consulta, (id_receta,))
 		ingredientes = cursor.fetchall()
 		return ingredientes
 	except Exception as e:
-		print(f"Error fetching ingredients: {e}")  # Log the error
+		print(f"Error fetching ingredients: {e}") 
 		raise e
 
 def calcular_costo_ingredientes(ingredientes):
@@ -327,6 +327,7 @@ def calcular_costo_ingredientes(ingredientes):
 def mostrar_recetas_con_costo(frame):
 	try:
 		recetas = obtener_recetas_con_costo()
+		print(recetas)
 		if recetas:
 
 			# Crear un estilo personalizado
