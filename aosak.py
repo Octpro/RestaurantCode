@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
@@ -31,10 +30,11 @@ def change_color_on_hover(widget, color_on_hover, color_on_leave):
 	
 def ingresar_ingrediente(frame):
 	global cuantidad,unidad
-	opciones_unidades = ["Gramos (g)", "Kilogramos (kg)", "Miligramos (mg)", "Libras (lb)", "Onzas (oz)",
-						"Mililitros (ml)", "Litros (l)", "Centilitros (cl)", "Onzas fluidas (fl oz)",
-						"Pintas (pt)", "Cuartos de galón (qt)", "Galones (gal)", "Cucharadas (tbsp)",
-						"Cucharaditas (tsp)", "Tazas (cup)"]
+	opciones_unidades = [
+		"Gramos (g)", "Kilogramos (kg)", "Miligramos (mg)",
+		"Mililitros (ml)", "Litros (l)", "Cucharadas (tbsp)",
+		"Cucharaditas (tsp)", "Tazas (cup)", "Unidad (Un)"
+	]
 	tk.Label(frame, text="Nombre del ingrediente:", bg='#FFE3F3', font="Segoe_UI").pack()
 	entry_nombre = tk.Entry(frame, bg="#FFBFF1", justify="center", font="Segoe_UI")
 	entry_nombre.pack()
@@ -46,7 +46,7 @@ def ingresar_ingrediente(frame):
 	menu_unidad.pack()
 	menu_unidad["menu"].config(bg="#FFBFF1", font="Segoe_UI")
 
-	tk.Label(frame, text="Precio por unidad:", bg='#FFE3F3', font="Segoe_UI").pack()
+	tk.Label(frame, text="Precio:", bg='#FFE3F3', font="Segoe_UI").pack()
 	entry_precio = tk.Entry(frame, bg='#FFBFF1', font="Segoe_UI")
 	entry_precio.pack()
 	def guardar_ingrediente():
@@ -54,8 +54,8 @@ def ingresar_ingrediente(frame):
 		nombre = entry_nombre.get()
 		unidad = variable_unidad.get()
 		precio = float(entry_precio.get())
-		cursor.execute("INSERT INTO Ingredientes (Nombre, Unidad_Medida, Precio) VALUES (?, ?, ?, ?)",
-					   (nombre, unidad, cantidad, precio))
+		cursor.execute("INSERT INTO Ingredientes (Nombre, Unidad_Medida, Precio) VALUES (?, ?, ?)",
+					   (nombre, unidad, precio))
 		base.commit()
 		frame.forget()
 	separator = ttk.Separator(frame, orient=tk.HORIZONTAL)
@@ -74,10 +74,11 @@ def ver_ingrediente(frame):
 	estilo.theme_use('clam')  # Asegura que el tema base sea compatible
 	estilo.configure("mystyle.Treeview", highlightthickness=0, bd=0, background='#FFBFF1', font=('Lucida Console', 9))
 
-	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Unidad de Medida", "Precio por Unidad"), show="headings", style="mystyle.Treeview")
+	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Unidad de Medida", "Precio"), show="headings", style="mystyle.Treeview")
 	tabla.heading("Código", text="Código")
 	tabla.heading("Nombre", text="Nombre")
 	tabla.heading("Unidad de Medida", text="Unidad de Medida")
+	tabla.heading("Precio", text="Precio")
 	tabla.pack(fill=tk.BOTH, expand=True)  # Asegura que el Treeview ocupe todo el espacio disponible
 	
 	scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tabla.yview)
@@ -85,13 +86,13 @@ def ver_ingrediente(frame):
 	scrollbar.pack(side="right", fill="y")
 	
 	for ingrediente in ingredientes:
-		codigo, nombre, cantidad, unidad, precio = ingrediente
-		tabla.insert("", "end", values=(codigo, nombre, cantidad, unidad))
+		codigo, nombre, unidad, precio = ingrediente
+		tabla.insert("", "end", values=(codigo, nombre, unidad, precio))
 	tabla.pack(padx=20, pady=20)
 
 def ver_ingredientes(frame):
 
-	cursor.execute("SELECT Codigo_Ingrediente, Nombre, Cantidad, Unidad_Medida, Precio FROM Ingredientes")
+	cursor.execute("SELECT Codigo_Ingrediente, Nombre, Unidad_Medida, Precio FROM Ingredientes")
 	ingredientes = cursor.fetchall()
 	if not ingredientes:
 		tk.Label(frame, text="No hay ingredientes para mostrar.").pack()
@@ -102,15 +103,15 @@ def ver_ingredientes(frame):
 	estilo.theme_use('clam') 
 	estilo.configure("mystyle.Treeview", highlightthickness=0, bd=0, background='#FFE3F3', font=('Lucida Console', 9))
 
-	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Unidad de Medida", "Precio por Unidad"), show="headings", selectmode='browse', style="mystyle.Treeview")
+	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Unidad de Medida", "Precio"), show="headings", selectmode='browse', style="mystyle.Treeview")
 	tabla.heading("Código", text="Código")
 	tabla.heading("Nombre", text="Nombre")
 	tabla.heading("Unidad de Medida", text="Unidad de Medida")
 	tabla.pack(fill=tk.BOTH, expand=True)  
 
 	for ingrediente in ingredientes:
-		codigo, nombre, cantidad, unidad, precio = ingrediente
-		tabla.insert("", "end", values=(codigo, nombre, cantidad, unidad))
+		codigo, nombre, unidad, precio = ingrediente
+		tabla.insert("", "end", values=(codigo, nombre, unidad))
 
 	tabla.pack(padx=20, pady=20)
 	
@@ -129,7 +130,7 @@ def sisisi(frame):
 			tk.Label(frame, text=f"Nombre: {resultado_verificacion[1]}", bg='#FFE3F3', font="Segoe_UI").pack()
 			tk.Label(frame, text=f"Unidad de Medida: {resultado_verificacion[2]}", bg='#FFE3F3', font="Segoe_UI").pack()
 			tk.Label(frame, text=f"Precio: {resultado_verificacion[4]}", bg='#FFE3F3', font="Segoe_UI").pack()
-			opciones_modificar = ["Nombre", "Cantidad", "Unidad de Medida", "Precio", "Todos"]
+			opciones_modificar = ["Nombre", "Unidad de Medida", "Precio", "Todos"]
 			variable_opcion_modificar = tk.StringVar(frame)
 			variable_opcion_modificar.set(opciones_modificar[0])  # Valor predeterminado
 			option_menu_modificar = tk.OptionMenu(frame, variable_opcion_modificar, *opciones_modificar)
@@ -143,10 +144,11 @@ def sisisi(frame):
 				opcion_modificar = variable_opcion_modificar.get()
 				nuevo_valor = entry_nuevo_valor.get()
 				if opcion_modificar == "Unidad de Medida":
-					opciones_unidades = ["Gramos (g)", "Kilogramos (kg)", "Miligramos (mg)", "Libras (lb)", "Onzas (oz)",
-										 "Mililitros (ml)", "Litros (l)", "Centilitros (cl)", "Onzas fluidas (fl oz)",
-										 "Pintas (pt)", "Cuartos de galón (qt)", "Galones (gal)", "Cucharadas (tbsp)",
-										 "Cucharaditas (tsp)", "Tazas (cup)"]
+					opciones_unidades = [
+		"Gramos (g)", "Kilogramos (kg)", "Miligramos (mg)",
+		"Mililitros (ml)", "Litros (l)", "Cucharadas (tbsp)",
+		"Cucharaditas (tsp)", "Tazas (cup)", "Unidad (Un)"
+	]
 					entry_nuevo_valor.destroy()
 					nueva_unidad = tk.StringVar(frame)
 					nueva_unidad.set(resultado_verificacion[3])  # Establecer el valor actual como predeterminado
@@ -191,7 +193,7 @@ def eliminar_ingredientes(frame):
 	boton_confirmar_eliminacion.pack()
 	tk.Button(frame, text="        Ver        ",command=ver_ingredientes(frame), bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 
-#-----------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------- INGRESAR RECETA --------------------------------------------------------
 
 def ingresar_receta(frame):
 	ingredientes_receta = []
@@ -215,15 +217,23 @@ def ingresar_receta(frame):
 		return costo_total
 		
 	def agregar_ingrediente():
-		codigo_ingrediente = int(entry_codigo.get())
+		nombre_ingrediente = entry_nombre.get()
 		cantidad_ingrediente = float(entry_cantidad.get())
 		unidad_val = unidad.get()
-		cursor.execute("SELECT Nombre FROM INGREDIENTES WHERE Codigo_Ingrediente = ?", (codigo_ingrediente,))
+		cursor.execute("SELECT Nombre FROM INGREDIENTES WHERE Nombre like ?", (nombre_ingrediente,))
 		nombre_ing = cursor.fetchone()[0]
 		ingredientes_receta.append((nombre_ing, cantidad_ingrediente))
 		unidad_valores.append(unidad_val)
-		ingredientes_codigos.append(codigo_ingrediente)
+		ingredientes_codigos.append(nombre_ingrediente)
 		listbox_ingredientes.insert(tk.END, f"{nombre_ing}: {cantidad_ingrediente} {unidad.get()}")
+	def eliminar_ingrediente(indice):
+		if indice < len(ingredientes_receta):
+			nombre_ing, _ = ingredientes_receta.pop(indice)
+			unidad_valores.pop(indice)
+			ingredientes_codigos.pop(indice)
+			listbox_ingredientes.delete(indice)
+			messagebox.showinfo("Éxito", f"Ingrediente '{nombre_ing}' eliminado correctamente.")
+
 	def guardar_receta():
 		nombre_receta = entry_nombre_receta.get()
 		
@@ -248,18 +258,17 @@ def ingresar_receta(frame):
 	tk.Label(frame, text="Nombre de la receta:", bg='#FFE3F3', font="Segoe_UI").pack()
 	entry_nombre_receta = tk.Entry(frame, bg='#FFBFF1', font="Segoe_UI")
 	entry_nombre_receta.pack()
-	tk.Label(frame, text="Código del ingrediente:", bg='#FFE3F3', font="Segoe_UI").pack()
-	entry_codigo = tk.Entry(frame, bg='#FFBFF1', font="Segoe_UI")
-	entry_codigo.pack()
+	tk.Label(frame, text="Nombre del ingrediente:", bg='#FFE3F3', font="Segoe_UI").pack()
+	entry_nombre = tk.Entry(frame, bg='#FFBFF1', font="Segoe_UI")
+	entry_nombre.pack()
 	tk.Label(frame, text="Cantidad del ingrediente:", bg='#FFE3F3', font="Segoe_UI").pack()
 	entry_cantidad = tk.Entry(frame, bg='#FFBFF1', font="Segoe_UI")
 	entry_cantidad.pack()
 	unidad = tk.StringVar(frame)
 	unidades = [
-		"Gramos (g)", "Kilogramos (kg)", "Miligramos (mg)", "Libras (lb)", "Onzas (oz)",
-		"Mililitros (ml)", "Litros (l)", "Centilitros (cl)", "Onzas fluidas (fl oz)",
-		"Pintas (pt)", "Cuartos de galón (qt)", "Galones (gal)", "Cucharadas (tbsp)",
-		"Cucharaditas (tsp)", "Tazas (cup)"
+		"Gramos (g)", "Kilogramos (kg)", "Miligramos (mg)",
+		"Mililitros (ml)", "Litros (l)", "Cucharadas (tbsp)",
+		"Cucharaditas (tsp)", "Tazas (cup)", "Unidad (Un)"
 	]
 	unidad.set(unidades[0])
 	menu_uni = tk.OptionMenu(frame, unidad, *unidades)
@@ -269,7 +278,9 @@ def ingresar_receta(frame):
 	tk.Button(frame, text="Agregar Ingrediente", command=agregar_ingrediente, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 	listbox_ingredientes = tk.Listbox(frame, bg="#FFBFF1", font="Segoe_UI")
 	listbox_ingredientes.pack()
+	tk.Button(frame, text="Eliminar Ingrediente", command=lambda: eliminar_ingrediente(listbox_ingredientes.curselection()[0]), bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 	tk.Button(frame, text="Guardar Receta", command=guardar_receta, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
+
 #-------------------------------------------- VER RECETA --------------------------------------------------
 def mostrar_receta(frame):
 	cursor.execute("SELECT * FROM RECETAS")
@@ -295,7 +306,6 @@ def mostrar_receta(frame):
 	for receta in recetas:
 		codigo, nombre, costo, ingredientes, cantidad, unidad = receta
 		tabla.insert("", "end", values=(codigo, nombre, costo, ingredientes, cantidad, unidad))
-
 
 	tabla.pack(padx=20, pady=20)
 
@@ -323,7 +333,6 @@ def mostrar_receta_top(frame):
 	for receta in recetas:
 		codigo, nombre, costo, ingredientes, cantidad, unidad = receta
 		tabla.insert("", "end", values=(codigo, nombre, costo, ingredientes, cantidad, unidad))
-
 
 	tabla.pack(padx=20, pady=20)
 
@@ -376,6 +385,7 @@ def modificar_receta(frame):
 	tk.Button(frame, text="Mostrar Detalle", command=mostrar_detalle_modificar, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 	tk.Frame(frame,command=mostrar_receta_top(frame), bg='#FFE3F3').pack()
 
+# ------------------------------------------- ELIMINAR RECETA --------------------------------------------------------
 def eliminar_receta(frame):
 	def confirmar_eliminacion():
 		codigo_receta = entry_codigo_eliminar.get()
@@ -397,7 +407,7 @@ def eliminar_receta(frame):
 	tk.Button(frame, text="Confirmar", command=confirmar_eliminacion, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 	tk.Button(frame, text="        Ver        ",command=mostrar_receta(frame), bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 
-#..................
+# ------------------------------------------- INGRESAR PLATO --------------------------------------------------------
 def ingresar_plato(frame):
 	implementado_menu = tk.BooleanVar()
 	def implementar_en_menu():
@@ -463,6 +473,7 @@ def ingresar_plato(frame):
 	implementar_menu_button = tk.Button(frame, text="Verificar si esta en el Menú",bg='#FFE3F3', font="Segoe_UI_Black",activebackground="#F0A7C4",command=implementar_en_menu)
 	implementar_menu_button.grid(row=5, column=1, padx=10, pady=10)
 
+# ------------------------------------------- VER PLATO --------------------------------------------------------
 def mostrar_platos_menu(frame):
     cursor.execute("SELECT * FROM Platos")
     platos = cursor.fetchall()
@@ -515,6 +526,7 @@ def guardar_platos_menu(frame):
 	if len(platos) == 0:
 		messagebox.showwarning("Advertencia", "No has añadido ningún plato al menú. Por favor, asegúrate de añadir al menos un plato al menú antes de guardar los cambios.")
 
+# ------------------------------------------- MODIFICAR PLATO --------------------------------------------------------
 def mostrar_detalle_modificar(frame):
     tk.Label(frame, text="Nombre del plato a modificar:", bg='#FFE3F3', font="Segoe_UI").pack()
     entry_nombre_modificar = tk.Entry(frame, bg="#FFBFF1", justify="center", font="Segoe_UI")
@@ -556,6 +568,7 @@ def mostrar_detalle_modificar(frame):
     tk.Button(frame, text="Obtener Detalle", command=obtener_datos_modificar, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
     tk.Button(frame, text="Ver", command=mostrar_platos_menus, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 
+# ------------------------------------------- ELIMINAR PLATO --------------------------------------------------------
 def eliminar_plato(frame):
     tk.Label(frame, text="Nombre del plato a eliminar:", bg='#FFE3F3', font="Segoe_UI").pack()
     entry_nombre_eliminar = tk.Entry(frame, bg="#FFBFF1", justify="center", font="Segoe_UI")
