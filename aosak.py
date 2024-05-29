@@ -9,8 +9,8 @@ import re
 base = sqlite3.connect('sistemaa.db')
 cursor = base.cursor()
 
-cursor.execute('CREATE TABLE IF NOT EXISTS INGREDIENTES  ( Codigo_Ingrediente INTEGER PRIMARY KEY AUTOINCREMENT, Nombre VARCHAR(100), Unidad_Medida VARCHAR(50), Cantidad NUMBER, Precio NUMBER, Detalles TEXT )')
-cursor.execute('CREATE TABLE IF NOT EXISTS RECETAS (Codigo_Receta INTEGER PRIMARY KEY AUTOINCREMENT, Nombre VARCHAR(100), Costo FLOAT, Codigo_Ingrediente INT, Cantidad_De_Cada_Ingrediente NUMBER, FOREIGN KEY (Codigo_Ingrediente) REFERENCES INGREDIENTES(Codigo_Ingrediente))')
+cursor.execute('CREATE TABLE IF NOT EXISTS INGREDIENTES  ( Codigo_Ingrediente INTEGER PRIMARY KEY AUTOINCREMENT, Nombre VARCHAR(100), Unidad_Medida VARCHAR(50), Precio NUMBER, Detalles TEXT )')
+cursor.execute('CREATE TABLE IF NOT EXISTS RECETAS (Codigo_Receta INTEGER PRIMARY KEY AUTOINCREMENT, Nombre VARCHAR(100), Costo FLOAT, Codigo_Ingrediente INT, Cantidad_De_Cada_Ingrediente NUMBER,Unidad VARCHAR(20),FOREIGN KEY (Codigo_Ingrediente) REFERENCES INGREDIENTES(Codigo_Ingrediente))')
 cursor.execute('CREATE TABLE IF NOT EXISTS PLATOS (ID INTEGER PRIMARY KEY AUTOINCREMENT,Nombre VARCHAR(100),Ganancia NUMERIC,Precio_Final NUMERIC,Implementado_Menu BOOLEAN, Especificaciones VARCHAR(100));')
 cursor.execute("CREATE TABLE IF NOT EXISTS Menu (Nombre_Plato VARCHAR(100), FOREIGN KEY (Nombre_Plato) REFERENCES Platos(Nombre) ON DELETE CASCADE)")
 cursor.execute("CREATE TABLE IF NOT EXISTS RECETAS_INGREDIENTES (Codigo_Receta INTEGER,Codigo_Ingrediente INTEGER,Cantidad NUMBER,FOREIGN KEY (Codigo_Receta) REFERENCES RECETAS(Codigo_Receta),FOREIGN KEY (Codigo_Ingrediente) REFERENCES INGREDIENTES(Codigo_Ingrediente))")
@@ -28,10 +28,9 @@ def change_color_on_hover(widget, color_on_hover, color_on_leave):
 
 	widget.bind("<Enter>", on_enter)
 	widget.bind("<Leave>", on_leave)
-# entry:  ,bg="#FFBFF1", justify="center", font="Segoe_UI"
-# label:  ,bg='#FFE3F3', font="Segoe_UI
-# button: ,bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4"
+	
 def ingresar_ingrediente(frame):
+	global cuantidad,unidad
 	opciones_unidades = ["Gramos (g)", "Kilogramos (kg)", "Miligramos (mg)", "Libras (lb)", "Onzas (oz)",
 						"Mililitros (ml)", "Litros (l)", "Centilitros (cl)", "Onzas fluidas (fl oz)",
 						"Pintas (pt)", "Cuartos de galón (qt)", "Galones (gal)", "Cucharadas (tbsp)",
@@ -39,9 +38,6 @@ def ingresar_ingrediente(frame):
 	tk.Label(frame, text="Nombre del ingrediente:", bg='#FFE3F3', font="Segoe_UI").pack()
 	entry_nombre = tk.Entry(frame, bg="#FFBFF1", justify="center", font="Segoe_UI")
 	entry_nombre.pack()
-	tk.Label(frame, text="Cantidad:", bg='#FFE3F3', font="Segoe_UI").pack()
-	entry_cantidad = tk.Entry(frame, bg="#FFBFF1", font="Segoe_UI")
-	entry_cantidad.pack()
 	tk.Label(frame, text="Unidad de medida:", bg='#FFE3F3', font="Segoe_UI").pack()
 	variable_unidad = tk.StringVar(frame)
 	variable_unidad.set(opciones_unidades[0])
@@ -53,13 +49,12 @@ def ingresar_ingrediente(frame):
 	tk.Label(frame, text="Precio por unidad:", bg='#FFE3F3', font="Segoe_UI").pack()
 	entry_precio = tk.Entry(frame, bg='#FFBFF1', font="Segoe_UI")
 	entry_precio.pack()
-
 	def guardar_ingrediente():
+		global unidad, cantidad
 		nombre = entry_nombre.get()
-		cantidad = float(entry_cantidad.get())
 		unidad = variable_unidad.get()
 		precio = float(entry_precio.get())
-		cursor.execute("INSERT INTO Ingredientes (Nombre, Unidad_Medida, Cantidad, Precio) VALUES (?, ?, ?, ?)",
+		cursor.execute("INSERT INTO Ingredientes (Nombre, Unidad_Medida, Precio) VALUES (?, ?, ?, ?)",
 					   (nombre, unidad, cantidad, precio))
 		base.commit()
 		frame.forget()
@@ -68,7 +63,7 @@ def ingresar_ingrediente(frame):
 	tk.Button(frame, text="Guardar", command=guardar_ingrediente, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 
 def ver_ingrediente(frame):
-	cursor.execute("SELECT Codigo_Ingrediente, Nombre, Cantidad, Unidad_Medida, Precio FROM Ingredientes")
+	cursor.execute("SELECT Codigo_Ingrediente, Nombre, Unidad_Medida, Precio FROM Ingredientes")
 	ingredientes = cursor.fetchall()
 	if not ingredientes:
 		print("No hay ingredientes para mostrar.")
@@ -79,12 +74,10 @@ def ver_ingrediente(frame):
 	estilo.theme_use('clam')  # Asegura que el tema base sea compatible
 	estilo.configure("mystyle.Treeview", highlightthickness=0, bd=0, background='#FFBFF1', font=('Lucida Console', 9))
 
-	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Cantidad", "Unidad de Medida", "Precio por Unidad"), show="headings", style="mystyle.Treeview")
+	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Unidad de Medida", "Precio por Unidad"), show="headings", style="mystyle.Treeview")
 	tabla.heading("Código", text="Código")
 	tabla.heading("Nombre", text="Nombre")
-	tabla.heading("Cantidad", text="Cantidad")
 	tabla.heading("Unidad de Medida", text="Unidad de Medida")
-	tabla.heading("Precio por Unidad", text="Precio por Unidad")
 	tabla.pack(fill=tk.BOTH, expand=True)  # Asegura que el Treeview ocupe todo el espacio disponible
 	
 	scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tabla.yview)
@@ -93,8 +86,7 @@ def ver_ingrediente(frame):
 	
 	for ingrediente in ingredientes:
 		codigo, nombre, cantidad, unidad, precio = ingrediente
-		precio_por_unidad = precio / cantidad
-		tabla.insert("", "end", values=(codigo, nombre, cantidad, unidad, precio_por_unidad))
+		tabla.insert("", "end", values=(codigo, nombre, cantidad, unidad))
 	tabla.pack(padx=20, pady=20)
 
 def ver_ingredientes(frame):
@@ -110,18 +102,15 @@ def ver_ingredientes(frame):
 	estilo.theme_use('clam') 
 	estilo.configure("mystyle.Treeview", highlightthickness=0, bd=0, background='#FFE3F3', font=('Lucida Console', 9))
 
-	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Cantidad", "Unidad de Medida", "Precio por Unidad"), show="headings", selectmode='browse', style="mystyle.Treeview")
+	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Unidad de Medida", "Precio por Unidad"), show="headings", selectmode='browse', style="mystyle.Treeview")
 	tabla.heading("Código", text="Código")
 	tabla.heading("Nombre", text="Nombre")
-	tabla.heading("Cantidad", text="Cantidad")
 	tabla.heading("Unidad de Medida", text="Unidad de Medida")
-	tabla.heading("Precio por Unidad", text="Precio por Unidad")
 	tabla.pack(fill=tk.BOTH, expand=True)  
 
 	for ingrediente in ingredientes:
 		codigo, nombre, cantidad, unidad, precio = ingrediente
-		precio_por_unidad = precio / cantidad
-		tabla.insert("", "end", values=(codigo, nombre, cantidad, unidad, precio_por_unidad))
+		tabla.insert("", "end", values=(codigo, nombre, cantidad, unidad))
 
 	tabla.pack(padx=20, pady=20)
 	
@@ -138,7 +127,6 @@ def sisisi(frame):
 			tk.messagebox.showerror("Error", "No se encontró ningún ingrediente con ese código.")
 		else:
 			tk.Label(frame, text=f"Nombre: {resultado_verificacion[1]}", bg='#FFE3F3', font="Segoe_UI").pack()
-			tk.Label(frame, text=f"Cantidad: {resultado_verificacion[3]}", bg='#FFE3F3', font="Segoe_UI").pack()
 			tk.Label(frame, text=f"Unidad de Medida: {resultado_verificacion[2]}", bg='#FFE3F3', font="Segoe_UI").pack()
 			tk.Label(frame, text=f"Precio: {resultado_verificacion[4]}", bg='#FFE3F3', font="Segoe_UI").pack()
 			opciones_modificar = ["Nombre", "Cantidad", "Unidad de Medida", "Precio", "Todos"]
@@ -169,7 +157,7 @@ def sisisi(frame):
 					entry_nuevo_valor.insert(0, resultado_verificacion[opciones_modificar.index(opcion_modificar) + 1])
 				def guardar_modificacion():
 					if opcion_modificar == "Todos":
-						campos = ["Nombre", "Cantidad", "Unidad_Medida", "Precio"]
+						campos = ["Nombre", "Unidad_Medida", "Precio"]
 						for campo in campos:
 							cursor.execute(f"UPDATE Ingredientes SET {campo} = ? WHERE Codigo_Ingrediente = ?",
 										   (nuevo_valor, codigo_modificar))
@@ -187,7 +175,7 @@ def sisisi(frame):
 			boton_guardar_cambios = tk.Button(frame, text="Guardar Cambios", command=confirmar_modificacion, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4")
 			boton_guardar_cambios.pack()
 	tk.Button(frame, text="Mostrar Detalle", command=mostrar_detalle_modificar, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
-	tk.Button(frame, text="        Ver        ",command=ver_ingredientes, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
+	tk.Button(frame, text="        Ver        ",command=ver_ingredientes(frame), bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 
 def eliminar_ingredientes(frame):
 	tk.Label(frame, text="Código del ingrediente a eliminar:", bg='#FFE3F3', font="Segoe_UI").pack()
@@ -201,49 +189,59 @@ def eliminar_ingredientes(frame):
 		frame.destroy()
 	boton_confirmar_eliminacion = tk.Button(frame, text="Confirmar Eliminación", command=confirmar_eliminacion, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4")
 	boton_confirmar_eliminacion.pack()
-	tk.Button(frame, text="        Ver        ",command=ver_ingredientes, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
+	tk.Button(frame, text="        Ver        ",command=ver_ingredientes(frame), bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 
 #-----------------------------------------------------------------------------------------------------------------------------
 
 def ingresar_receta(frame):
 	ingredientes_receta = []
 	ingredientes_codigos = []
+	unidad_valores = []
 	def calcular_costo_total(ingredientes_receta):
 		costo_total = 0
-		for nombre, cantidad in ingredientes_receta:
-			cursor.execute("SELECT Precio FROM Ingredientes WHERE Nombre = ?", (nombre,))
-			precio_ingrediente = cursor.fetchone()
-			if precio_ingrediente:
-				precio_ingrediente = precio_ingrediente[0]
-				costo_ingrediente = precio_ingrediente * cantidad
-				costo_total += costo_ingrediente
-			else:
-				messagebox.showerror("Error", f"No se encontró el precio para el ingrediente {nombre}.")
-		return costo_total
-	def agregar_ingrediente():
+		print(ingredientes_receta)
 
+		for nombre, cantidad in ingredientes_receta:
+			cursor.execute("SELECT Precio FROM Ingredientes WHERE Nombre =?", (nombre,))
+			precio_ingrediente = cursor.fetchone()
+			
+			if precio_ingrediente is None:
+				messagebox.showerror("Error", f"No se encontró el precio para el ingrediente {nombre}.")
+			else:
+				precio_actual = precio_ingrediente[0]
+				costo_ingle = cantidad * precio_actual
+				costo_total += costo_ingle
+		
+		return costo_total
+		
+	def agregar_ingrediente():
 		codigo_ingrediente = int(entry_codigo.get())
 		cantidad_ingrediente = float(entry_cantidad.get())
+		unidad_val = unidad.get()
 		cursor.execute("SELECT Nombre FROM INGREDIENTES WHERE Codigo_Ingrediente = ?", (codigo_ingrediente,))
 		nombre_ing = cursor.fetchone()[0]
 		ingredientes_receta.append((nombre_ing, cantidad_ingrediente))
+		unidad_valores.append(unidad_val)
 		ingredientes_codigos.append(codigo_ingrediente)
 		listbox_ingredientes.insert(tk.END, f"{nombre_ing}: {cantidad_ingrediente} {unidad.get()}")
 	def guardar_receta():
 		nombre_receta = entry_nombre_receta.get()
+		
 		if not nombre_receta:
 			tk.messagebox.showerror("Error", "Por favor, ingrese el nombre de la receta.")
 			return
 		if not ingredientes_receta:
 			tk.messagebox.showerror("Error", "La receta debe tener al menos un ingrediente.")
 			return
-		nombre_ingredientes = ", ".join(ingrediente[0] for ingrediente in ingredientes_receta)
-		cantidades_ingredientes = ", ".join(str(ingrediente[1]) + " " + unidad.get() for ingrediente in ingredientes_receta)
+		nombre_ingredientes = ", ".join([ingrediente[0] for ingrediente in ingredientes_receta])
+		cantidades = ", ".join([str(cantidad[1]) for cantidad in ingredientes_receta])
+		unidades = ", ".join(unidad for unidad in unidad_valores)	
 		costo_total = calcular_costo_total(ingredientes_receta)
-		cursor.execute("INSERT INTO Recetas (Nombre, Costo, Codigo_Ingrediente, Cantidad_De_Cada_Ingrediente) VALUES (?, ?, ?, ?)",
-					   (nombre_receta, costo_total, nombre_ingredientes, cantidades_ingredientes))
+		cantidades_ingredientes = ", ".join(str(ingrediente[1]) + " " + unidad.get() for ingrediente in ingredientes_receta)
+		cursor.execute("INSERT INTO Recetas (Nombre, Costo, Codigo_Ingrediente, Cantidad_De_Cada_Ingrediente, unidad) VALUES (?, ?, ?, ?, ?)",
+					   (nombre_receta, costo_total, nombre_ingredientes, cantidades, unidades))
 		codigo_receta = cursor.lastrowid
-		cursor.execute("INSERT INTO RECETAS_INGREDIENTES (Codigo_Receta, Codigo_Ingrediente) VALUES (?,?)", (codigo_receta,ingredientes_codigos[-1]))
+		cursor.execute("INSERT INTO RECETAS_INGREDIENTES (Codigo_Receta, Codigo_Ingrediente, Cantidad) VALUES (?,?,?)", (codigo_receta,ingredientes_codigos[-1],cantidades_ingredientes))
 		base.commit()
 		tk.messagebox.showinfo("Éxito", "Receta ingresada correctamente.")
 
@@ -272,160 +270,64 @@ def ingresar_receta(frame):
 	listbox_ingredientes = tk.Listbox(frame, bg="#FFBFF1", font="Segoe_UI")
 	listbox_ingredientes.pack()
 	tk.Button(frame, text="Guardar Receta", command=guardar_receta, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
+#-------------------------------------------- VER RECETA --------------------------------------------------
+def mostrar_receta(frame):
+	cursor.execute("SELECT * FROM RECETAS")
+	recetas = cursor.fetchall()
+	if not recetas:
+		tk.Label(frame, text="No hay recetas para mostrar.").pack()
+		return
+	
+	# Crear un estilo personalizado
+	estilo = ttk.Style()
+	estilo.theme_use('clam') 
+	estilo.configure("mystyle.Treeview", highlightthickness=0, bd=0, background='#FFE3F3', font=('Lucida Console', 9))
 
-def obtener_recetas_con_costo():
-	try:
-		consulta = """
-		SELECT Codigo_Receta, Nombre, 
-			   (SELECT SUM(I.Precio * R.Cantidad_De_Cada_Ingrediente) 
-				FROM INGREDIENTES I 
-				WHERE I.Codigo_Ingrediente = R.Codigo_Ingrediente) AS Costo_Total
-		FROM RECETAS R
-		"""
-		cursor.execute(consulta)
-		recetas = cursor.fetchall()
-		
-		consulta = "SELECT PRECIO FROM INGREDIENTES"
-		cursor.execute(consulta)
-		precio = cursor.fetchone()[0]
+	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Costo", "Ingredientes", "Cantidades", "Unidad"), show="headings", selectmode='browse', style="mystyle.Treeview")
+	tabla.heading("Código", text="Código")
+	tabla.heading("Nombre", text="Nombre")
+	tabla.heading("Costo", text="Costo")
+	tabla.heading("Ingredientes", text="Ingredientes")
+	tabla.heading("Cantidades", text="Cantidades")
+	tabla.heading("Unidad", text="Unidad")
+	tabla.pack(fill=tk.BOTH, expand=True)
 
-		consulta = "SELECT CANTIDAD_DE_CADA_INGREDIENTE FROM RECETAS"
-		cursor.execute(consulta)
-		cantidad_de_cada = cursor.fetchone()[0]
+	for receta in recetas:
+		codigo, nombre, costo, ingredientes, cantidad, unidad = receta
+		tabla.insert("", "end", values=(codigo, nombre, costo, ingredientes, cantidad, unidad))
 
-		numero_parte = re.findall(r'\d+\.\d+', cantidad_de_cada)[0]
-		cantidad_entera = int(float(numero_parte))
 
-		costo_total = int(precio) * cantidad_entera
-		print(f"costo_total = {costo_total}")
-		return recetas, costo_total
-	except Exception as e:
-		raise e
+	tabla.pack(padx=20, pady=20)
 
-def obtener_ingredientes_por_receta(id_receta):
-	try:
-		consulta = """
-			SELECT I.Nombre, RI.Cantidad, I.Precio
-			FROM INGREDIENTES I
-			JOIN RECETAS_INGREDIENTES RI ON I.Codigo_Ingrediente = RI.Codigo_Ingrediente
-			WHERE RI.Codigo_Receta = ?
-		"""
-		cursor.execute(consulta, (id_receta,))
-		ingredientes = cursor.fetchall()
-		return ingredientes
-	except Exception as e:
-		print(f"Error fetching ingredients: {e}") 
-		raise e
+def mostrar_receta_top(frame):
+	cursor.execute("SELECT * FROM RECETAS")
+	recetas = cursor.fetchall()
+	if not recetas:
+		tk.Label(frame, text="No hay recetas para mostrar.").pack()
+		return
+	
+	# Crear un estilo personalizado
+	estilo = ttk.Style()
+	estilo.theme_use('clam') 
+	estilo.configure("mystyle.Treeview", highlightthickness=0, bd=0, background='#FFE3F3', font=('Lucida Console', 9))
 
-def calcular_costo_ingredientes(ingredientes):
-	costo_total = 0
-	for ingrediente in ingredientes:
-		nombre, cantidad, precio_unitario = ingrediente
-		costo_total += cantidad * precio_unitario
-	return costo_total
+	tabla = ttk.Treeview(frame, columns=("Código", "Nombre", "Costo", "Ingredientes", "Cantidades", "Unidad"), show="headings", selectmode='browse', style="mystyle.Treeview")
+	tabla.heading("Código", text="Código")
+	tabla.heading("Nombre", text="Nombre")
+	tabla.heading("Costo", text="Costo")
+	tabla.heading("Ingredientes", text="Ingredientes")
+	tabla.heading("Cantidades", text="Cantidades")
+	tabla.heading("Unidad", text="Unidad")
+	tabla.pack(fill=tk.BOTH, expand=True)
 
-def mostrar_recetas_con_costo(frame):
-	try:
-		recetas = obtener_recetas_con_costo()
-		print(recetas)
-		if recetas:
+	for receta in recetas:
+		codigo, nombre, costo, ingredientes, cantidad, unidad = receta
+		tabla.insert("", "end", values=(codigo, nombre, costo, ingredientes, cantidad, unidad))
 
-			# Crear un estilo personalizado
-			estilo = ttk.Style()
-			estilo.theme_use('clam')  # Asegura que el tema base sea compatible
-			estilo.configure("mystyle.Treeview", highlightthickness=0, bd=0, background='#FFBFF1', font=('Lucida Console', 9))
 
-			# Crear la tabla dentro del frame interior
-			# background='#FFBFF1', font=('Lucida Console', 9)
-			#
-			tabla = ttk.Treeview(frame, columns=("Código Receta", "Nombre Receta", "Costo Receta" ,"Ingredientes"), style="mystyle.Treeview")
-			tabla.heading("#0", text="Índice")
-			tabla.heading("Código Receta", text="Código Receta")
-			tabla.heading("Nombre Receta", text="Nombre Receta")
-			tabla.heading("Costo Receta", text="Costo Receta")
-			tabla.heading("Ingredientes", text="Ingredientes")            
-			tabla.pack(fill="both", expand=True)
+	tabla.pack(padx=20, pady=20)
 
-			scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tabla.yview)
-			tabla.configure(yscrollcommand=scrollbar.set)
-			scrollbar.pack(side="right", fill="y")
-			# Main script starts here
-			ingredientes = []
-			costo_ingredientes = 0
-
-			for index, receta in enumerate(recetas, start=1):
-				id_receta = receta[0]
-				ingredientes = obtener_ingredientes_por_receta(id_receta)
-				costo_ingredientes = calcular_costo_ingredientes(ingredientes)
-				tabla.insert('', 'end', text=str(index), values=(receta[0], receta[1], costo_ingredientes,ingredientes))
-		else:
-			messagebox.showerror("Error", "No hay recetas disponibles.")
-	except Exception as e:
-		messagebox.showerror("Error", f"Error al mostrar recetas con costo: {e}")
-
-def anglosajona():
-	def obtener_recetas_con_costo():
-		try:
-			consulta = "SELECT * FROM RECETAS"
-			cursor.execute(consulta)
-			recetas = cursor.fetchall()
-			return recetas
-		except Exception as e:
-			raise e
-
-	def obtener_ingredientes_por_receta(id_receta):
-		try:
-			consulta = """
-			SELECT I.Nombre, RI.Cantidad, I.Precio
-			FROM INGREDIENTES I
-			JOIN RECETAS_INGREDIENTES RI ON I.Codigo_Ingrediente = RI.Codigo_Ingrediente
-			WHERE RI.Codigo_Receta = ?
-			"""
-			cursor.execute(consulta, (id_receta,))
-			ingredientes = cursor.fetchall()
-			return ingredientes
-		except Exception as e:
-			raise e
-
-	def calcular_costo_ingredientes(ingredientes):
-		costo_total = 0
-		for ingrediente in ingredientes:
-			nombre, cantidad, precio_unitario = ingrediente
-			costo_total += cantidad * precio_unitario
-		return costo_total
-
-	def mostrar_recetas_con_costo_en_toplevel(root):
-		try:
-			recetas = obtener_recetas_con_costo()
-			if recetas:
-				toplevel = tk.Toplevel(root)
-
-				estilo = ttk.Style()
-				estilo.theme_use('clam')
-				estilo.configure("mystyle.Treeview", highlightthickness=0, bd=0, background='#FFE3F3', font=('Lucida Console', 9))
-
-				tabla = ttk.Treeview(toplevel, columns=("Código Receta", "Nombre Receta", "Costo Receta", "Ingredientes"), style="mystyle.Treeview")
-				tabla.heading("#0", text="Índice")
-				tabla.heading("Código Receta", text="Código Receta")
-				tabla.heading("Nombre Receta", text="Nombre Receta")
-				tabla.heading("Costo Receta", text="Costo Receta")
-				tabla.heading("Ingredientes", text="Ingredientes")
-				tabla.pack(fill="both", expand=True)
-
-				for index, receta in enumerate(recetas, start=1):
-					id_receta = receta[0]
-					ingredientes = obtener_ingredientes_por_receta(id_receta)
-					costo_ingredientes = calcular_costo_ingredientes(ingredientes)
-					ingredientes_str = ', '.join([f"{ing[0]} ({ing[1]} unidades)" for ing in ingredientes])
-					tabla.insert('', 'end', text=str(index), values=(receta[0], receta[1], costo_ingredientes, ingredientes_str))
-			else:
-				messagebox.showinfo("Información", "No hay recetas disponibles.")
-		except Exception as e:
-			messagebox.showerror("Error", f"Error al mostrar recetas con costo: {e}")
-	root = tk.Tk()
-	mostrar_recetas_con_costo_en_toplevel(root)
-	root.mainloop()
-
+# ------------------------------------------- MODIFICAR RECETA --------------------------------------------------------
 def modificar_receta(frame):
 	tk.Label(frame, text="Código de la receta a modificar:", bg='#FFE3F3', font="Segoe_UI").pack()
 	entry_codigo_modificar = tk.Entry(frame, bg="#FFBFF1", font="Segoe_UI")
@@ -434,7 +336,6 @@ def modificar_receta(frame):
 		codigo_receta = entry_codigo_modificar.get()
 		cursor.execute("SELECT * FROM Recetas WHERE Codigo_Receta = ?", (codigo_receta,))
 		receta = cursor.fetchone()
-		print(f"receta {receta}")
 		if receta:
 			cursor.execute("SELECT Nombre, Cantidad_De_Cada_Ingrediente FROM Recetas WHERE Codigo_Ingrediente IN (SELECT Codigo_Ingrediente FROM Ingredientes)")
 			ingredientes = cursor.fetchall()
@@ -473,7 +374,7 @@ def modificar_receta(frame):
 		else:
 			tk.messagebox.showerror("Error", "La receta especificada no existe.")
 	tk.Button(frame, text="Mostrar Detalle", command=mostrar_detalle_modificar, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
-	tk.Button(frame, text="        Ver        ",command=anglosajona, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
+	tk.Frame(frame,command=mostrar_receta_top(frame), bg='#FFE3F3').pack()
 
 def eliminar_receta(frame):
 	def confirmar_eliminacion():
@@ -494,7 +395,7 @@ def eliminar_receta(frame):
 	entry_codigo_eliminar.pack()
 
 	tk.Button(frame, text="Confirmar", command=confirmar_eliminacion, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
-	tk.Button(frame, text="        Ver        ",command=anglosajona, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
+	tk.Button(frame, text="        Ver        ",command=mostrar_receta(frame), bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 
 #..................
 def ingresar_plato(frame):
@@ -576,9 +477,6 @@ def mostrar_platos_menu(frame):
         tabla.insert('', 'end', text=str(index), values=(plato[1], plato[2], plato[3], plato[4], plato[5]))
     tabla.pack(fill="both", expand=True)
 	
-
-
-
 def mostrar_platos_menus():
 	rootT = tk.Tk()
 	rootT.title("Aplicación CRUD")
@@ -694,7 +592,7 @@ def ver_carta(frame):
 	table.heading('Especificaciones', text = 'Especificaciones')
 
 	table.pack(padx=10, pady=10)
-	btn_cargar = tk.Button(frame, text="Cargar Carta", command=cargar_carta) 
+	btn_cargar = tk.Button(frame, text="Cargar Carta", command=cargar_carta, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4") 
 	btn_cargar.pack(pady=10)
 
 def menu_modificar_precios(frame):
@@ -706,13 +604,13 @@ def menu_modificar_precios(frame):
 			base.commit()
 			tk.messagebox.showinfo("Exito", f"Se ha modificado el precio del plato '{nombre_plato}' correctamente.")
 
-		tk.Label(frame, text="Nombre del plato:").pack()
-		entry_nombre_plato = tk.Entry(frame)
+		tk.Label(frame, text="Nombre del plato:", bg='#FFE3F3', font="Segoe_UI").pack()
+		entry_nombre_plato = tk.Entry(frame,bg="#FFBFF1", justify="center", font="Segoe_UI")
 		entry_nombre_plato.pack()
-		tk.Label(frame, text="Nuevo precio:").pack()
-		entry_nuevo_precio = tk.Entry(frame)
+		tk.Label(frame, text="Nuevo precio:", bg='#FFE3F3', font="Segoe_UI").pack()
+		entry_nuevo_precio = tk.Entry(frame,bg="#FFBFF1", justify="center", font="Segoe_UI")
 		entry_nuevo_precio.pack()
-		tk.Button(frame, text="Guardar", command=guardar_modificacion).pack()
+		tk.Button(frame, text="Guardar", command=guardar_modificacion, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 	def modificar_precio_todos():
 		def guardar_modificacion():
 			porcentaje_aumento = float(entry_porcentaje.get())
@@ -725,14 +623,14 @@ def menu_modificar_precios(frame):
 				cursor.execute("UPDATE Platos SET Precio_Final = ? WHERE Nombre = ?", (nuevo_precio, nombre_plato))
 				base.commit()
 			tk.messagebox.showinfo("Éxito", f"Se ha modificado el precio de todos los platos correctamente.")
-		tk.Label(frame, text="Porcentaje de aumento para todos los platos (%):").pack()
-		entry_porcentaje = tk.Entry(frame)
+		tk.Label(frame, text="Porcentaje de aumento para todos los platos (%):", bg='#FFE3F3', font="Segoe_UI").pack()
+		entry_porcentaje = tk.Entry(frame,bg="#FFBFF1", justify="center", font="Segoe_UI")
 		entry_porcentaje.pack()
-		tk.Button(frame, text="Guardar", command=guardar_modificacion).pack()
+		tk.Button(frame, text="Guardar", command=guardar_modificacion, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 
-	tk.Button(frame, text="Modificar Precio de Plato Individual", command=modificar_precio_plato_individual).pack(pady=10)
-	tk.Button(frame, text="Modificar Precio de Todos los Platos", command=modificar_precio_todos).pack(pady=10)
-	tk.Button(frame, text="        Ver        ").pack()
+	tk.Button(frame, text="Modificar Precio de Plato Individual", command=modificar_precio_plato_individual, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack(pady=10)
+	tk.Button(frame, text="Modificar Precio de Todos los Platos", command=modificar_precio_todos, bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack(pady=10)
+	tk.Button(frame, text="        Ver        ", bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4").pack()
 
 
 def crear_menu(menu_principal, nombre_menu, opciones, root):
@@ -776,7 +674,7 @@ def mostrar_frame(opcion,menu ,root):
 		if opcion == "Ingresar":
 			ingresar_receta(current_frame)
 		if opcion == "Ver":
-			mostrar_recetas_con_costo(current_frame)
+			mostrar_receta(current_frame)
 		if opcion == "Modificar":
 			modificar_receta(current_frame)
 		if opcion == "Eliminar":
@@ -797,12 +695,10 @@ def mostrar_frame(opcion,menu ,root):
 			ver_carta(current_frame)
 		if opcion == "Modificar":
 			menu_modificar_precios(current_frame)
-	
-
 
 def main():
 	root = tk.Tk()
-	root.title("Aplicación CRUD")
+	root.title("RecipeCostX")
 	root.geometry("900x800")
 		
 	global current_frame
@@ -818,8 +714,6 @@ def main():
 	for nombre_menu, opciones in menus:
 		crear_menu(menu, nombre_menu, opciones, root)
 	root.mainloop()
-
-
 
 if __name__ == "__main__":
 	main()
