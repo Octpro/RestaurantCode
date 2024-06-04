@@ -451,12 +451,6 @@ def ingresar_plato(frame):
 	ganancia_entry = tk.Entry(frame,bg="#FFBFF1", justify="center", font="Segoe_UI")
 	ganancia_entry.grid(row=1, column=1, padx=10, pady=10)
 
-	precio_label = tk.Label(frame, text="Precio del Plato:",bg='#FFE3F3', font="Segoe_UI")
-	precio_label.grid(row=2, column=0, padx=10, pady=10)
-
-	precio_entry = tk.Entry(frame,bg="#FFBFF1", justify="center", font="Segoe_UI")
-	precio_entry.grid(row=2, column=1, padx=10, pady=10 )
-
 	detalles_lab = tk.Label(frame, text="Detalles del plato",bg='#FFE3F3', font="Segoe_UI")
 	detalles_lab.grid(row=3, column=0, padx=10, pady=10)
 
@@ -468,7 +462,7 @@ def ingresar_plato(frame):
 	implementar_menu_check = tk.Checkbutton(frame, text="Implementar menu", offvalue="No", onvalue="Si", variable=implementado_menu,bg='#FFE3F3', font="Segoe_UI")
 	implementar_menu_check.grid(row=4, column=1, padx=10, pady=10)
 
-	guardar_button = tk.Button(frame, text="Guardar",bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4", command=lambda: guardar_plato(nombre_entry, ganancia_entry, implementar_menu_check, precio_entry, detalles))
+	guardar_button = tk.Button(frame, text="Guardar",bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4", command=lambda: guardar_plato(nombre_entry, ganancia_entry, implementar_menu_check, detalles))
 	guardar_button.grid(row=5, column=0, padx=10, pady=10)
 	implementar_menu_button = tk.Button(frame, text="Verificar si esta en el Menú",bg='#FFE3F3', font="Segoe_UI_Black",activebackground="#F0A7C4",command=implementar_en_menu)
 	implementar_menu_button.grid(row=5, column=1, padx=10, pady=10)
