@@ -1,3 +1,7 @@
+#Fijate que funcione bien lo de los costos de la receta al momento de cargarla
+#pone algunos print para fijarte si hace bien los calculos
+#No se como queres hacer lo de los platos. Si busque una receta y saque el precio que tiene y ahi despues le pones la ganancia y el precio al plato
+#y no si se te ocurre cambiar algo mas
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
