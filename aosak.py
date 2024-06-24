@@ -2,6 +2,7 @@
 #pone algunos print para fijarte si hace bien los calculos
 #No se como queres hacer lo de los platos. Si busque una receta y saque el precio que tiene y ahi despues le pones la ganancia y el precio al plato
 #y no si se te ocurre cambiar algo mas
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
@@ -413,7 +414,6 @@ def eliminar_receta(frame):
 
 # ------------------------------------------- INGRESAR PLATO --------------------------------------------------------
 def ingresar_plato(frame):
-	implementado_menu = tk.BooleanVar()
 	def implementar_en_menu():
 		nombre_plato = nombre_entry.get()
 		cursor.execute("SELECT Implementado_Menu FROM Platos WHERE Nombre=?", (nombre_plato,))
@@ -426,23 +426,33 @@ def ingresar_plato(frame):
 				base.commit()
 				messagebox.showinfo("Éxito", "El plato se ha implementado en el menú correctamente.")
 				
-	def guardar_plato(entry_nombre, entry_ganancia, implementar_menu_check, entry_precio, detalles):
+	def guardar_plato(entry_nombre, entry_ganancia, implementar_menu_check, detalles):
 		nombre = entry_nombre.get()
 		ganancia_porcentaje = float(entry_ganancia.get())
-		precio_final = entry_precio.get()
 		detalles_plato = detalles.get()
-		if nombre and ganancia_porcentaje and precio_final:
-			implementado_menu_value = implementado_menu.get()
-			if implementado_menu_value == 1:
-				implementado_menu_value = "Si"
-			else:
-				implementado_menu_value = "No"
 
-			cursor.execute("INSERT INTO PLATOS (Nombre, Ganancia, Precio_Final, Implementado_Menu, Especificaciones) VALUES (?, ?, ?, ?, ?)",(nombre, ganancia_porcentaje, precio_final, implementado_menu_value, detalles_plato))
+		cursor.execute("SELECT COSTO FROM RECETAS WHERE NOMBRE LIKE?", ("%" + nombre + "%",))
+		costo = cursor.fetchone()[0]
+
+		ganancia_final = costo + (costo * (ganancia_porcentaje / 100))
+		print(ganancia_final)
+
+		campos_obligatorios = [nombre, ganancia_porcentaje, detalles_plato]
+		campos_faltantes = [campo for campo in campos_obligatorios if not campo]
+
+		if campos_faltantes:
+			mensaje_error = "Por favor completa los siguientes campos obligatorios: "
+			for campo in campos_faltantes:
+				mensaje_error += f"{campo} "
+
+			messagebox.showinfo("Error", mensaje_error.strip())
+		else:
+			implementado_menu_value = "Si" if implementado_menu.get() == "on" else "No"
+			cursor.execute("INSERT INTO PLATOS (Nombre, Ganancia,Precio_final ,Implementado_Menu, Especificaciones) VALUES (?,?,?,?,?)",
+						(nombre, ganancia_porcentaje, ganancia_final, implementado_menu.get(), detalles_plato))
 			base.commit()
 			messagebox.showinfo("Éxito", "Plato ingresado correctamente.")
-		else:
-			messagebox.showinfo("Error", "Por favor completa todos los campos obligatorios.")
+
 	nombre_label = tk.Label(frame, text="Nombre del Plato:",bg='#FFE3F3', font="Segoe_UI")
 	nombre_label.grid(row=0, column=0, padx=10, pady=10 )
 
@@ -462,8 +472,9 @@ def ingresar_plato(frame):
 	detalles.grid(row=3, column=1, padx=10, pady=10)
 
 	implementar_menu_lab = tk.Label(frame, text= "Implementar al menu",bg='#FFE3F3', font="Segoe_UI").grid(row=4, column=0, padx=10, pady=10)
-
+	implementado_menu = tk.StringVar()
 	implementar_menu_check = tk.Checkbutton(frame, text="Implementar menu", offvalue="No", onvalue="Si", variable=implementado_menu,bg='#FFE3F3', font="Segoe_UI")
+	implementado_menu.set("No") 
 	implementar_menu_check.grid(row=4, column=1, padx=10, pady=10)
 
 	guardar_button = tk.Button(frame, text="Guardar",bg='#FFE3F3', font="Segoe_UI_Black", activebackground="#F0A7C4", command=lambda: guardar_plato(nombre_entry, ganancia_entry, implementar_menu_check, detalles))
